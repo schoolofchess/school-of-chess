@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Blog | School of Chess – Training Tips & Expert Insights</title>
+    <meta name="description" content="Expert chess insights from FIDE National Instructor T. Muthukumar. Learn calculation techniques, strategy, openings, endgames, tournament psychology and more.">
+    <meta name="keywords" content="chess blog, chess training tips, chess strategy, chess openings, endgame techniques, tournament chess, FIDE chess India">
+    <meta name="author" content="School of Chess – T. Muthukumar">
+    <meta property="og:title" content="Chess Blog | School of Chess">
+    <meta property="og:description" content="Expert chess insights from FIDE National Instructor T. Muthukumar. Learn strategy, calculation, openings and more.">
+    <meta property="og:url" content="https://www.schoolofchess.org/blog.html">
+    <meta property="og:type" content="website">
+    <link rel="canonical" href="https://www.schoolofchess.org/blog.html">
+
+    <!-- Google Analytics GA4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-H3VFSQHK1L"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-H3VFSQHK1L');
+    </script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="images/SCHOOL OF CHESS.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/blog.css">
+
+    <!-- Schema.org -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      "name": "School of Chess Blog",
+      "url": "https://www.schoolofchess.org/blog.html",
+      "description": "Chess training insights and expert tips from FIDE National Instructor T. Muthukumar",
+      "publisher": {
+        "@type": "Organization",
+        "name": "School of Chess",
+        "url": "https://www.schoolofchess.org"
+      }
+    }
+    </script>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<header id="navbar">
+    <nav class="container nav-inner">
+        <a href="index.html" class="logo">
+            <img src="images/SCHOOL OF CHESS.png" alt="School of Chess Logo" class="logo-img">
+            <span class="logo-text">School <span>of Chess</span></span>
+        </a>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="index.html#about">About</a></li>
+            <li><a href="index.html#programs">Programs</a></li>
+            <li><a href="index.html#achievements">Achievements</a></li>
+            <li><a href="index.html#reviews">Reviews</a></li>
+            <li><a href="blog.html" class="active">Blog</a></li>
+            <li><a href="analysis.html">Analysis</a></li>
+            <li><a href="index.html#contact">Contact</a></li>
+            <li>
+                <a href="https://wa.me/917200530636?text=Hi%2C%20I%20want%20to%20know%20more%20about%20School%20of%20Chess"
+                   class="btn btn-primary btn-nav" target="_blank" rel="noopener">
+                    <i class="fab fa-whatsapp"></i> Free Trial
+                </a>
+            </li>
+        </ul>
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+</header>
+
+<!-- ===== BLOG HERO ===== -->
+<section class="blog-hero">
+    <div class="container">
+        <p class="blog-hero-label"><i class="fas fa-chess-knight"></i> &nbsp;School of Chess</p>
+        <h1 class="blog-hero-title">Chess Insights &amp; <span>Training Tips</span></h1>
+        <p class="blog-hero-desc">Expert lessons, strategy breakdowns and improvement guides from FIDE National Instructor T. Muthukumar.</p>
+
+        <!-- Search bar -->
+        <div class="blog-search-wrap">
+            <div class="blog-search-box">
+                <input type="text" id="blogSearch" placeholder="Search articles…" autocomplete="off" aria-label="Search blog posts">
+                <button class="search-btn" onclick="doSearch()">
+                    <i class="fas fa-search"></i>
+                    <span>Search</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== BLOG MAIN ===== -->
+<main class="blog-main">
+    <div class="container">
+
+        <!-- Category filter -->
+        <div class="blog-filter-wrap" id="filterWrap">
+            <button class="filter-btn active" data-cat="all" onclick="filterPosts(this)">
+                <i class="fas fa-border-all"></i> All Posts
+            </button>
+            <button class="filter-btn" data-cat="calculation" onclick="filterPosts(this)">
+                <i class="fas fa-brain"></i> Calculation
+            </button>
+            <button class="filter-btn" data-cat="strategy" onclick="filterPosts(this)">
+                <i class="fas fa-chess-board"></i> Strategy
+            </button>
+            <button class="filter-btn" data-cat="opening" onclick="filterPosts(this)">
+                <i class="fas fa-play-circle"></i> Openings
+            </button>
+            <button class="filter-btn" data-cat="endgame" onclick="filterPosts(this)">
+                <i class="fas fa-flag-checkered"></i> Endgames
+            </button>
+            <button class="filter-btn" data-cat="psychology" onclick="filterPosts(this)">
+                <i class="fas fa-heart-pulse"></i> Psychology
+            </button>
+            <button class="filter-btn" data-cat="student" onclick="filterPosts(this)">
+                <i class="fas fa-star"></i> Student Stories
+            </button>
+        </div>
+
+        <!-- Results info -->
+        <div class="blog-results-info">
+            <p class="results-count" id="resultsCount"><strong>6</strong> articles found</p>
+        </div>
+
+        <!-- No results -->
+        <div class="no-results" id="noResults">
+            <i class="fas fa-search"></i>
+            <h3>No articles found</h3>
+            <p>Try a different keyword or browse all categories.</p>
+        </div>
+
+        <!-- Blog grid -->
+        <div class="blog-grid" id="blogGrid">
+
+            <!-- Card 1 — Calculation (FEATURED) -->
+            <article class="blog-card featured fade-up visible" data-cat="calculation"
+                     data-title="5 Calculation Techniques to Sharpen Your Chess Thinking"
+                     data-excerpt="Master the art of tactical calculation with these proven methods used by top players and coaches worldwide."
+                     onclick="window.location='blog/chess-calculation-techniques.html'">
+                <div class="blog-card-img cat-calculation">
+                    <div class="blog-card-img-inner">
+                        <span class="piece">♞</span>
+                    </div>
+                    <span class="blog-card-badge">Calculation Training</span>
+                </div>
+                <div class="blog-card-body">
+                    <div class="blog-card-meta">
+                        <span><i class="fas fa-calendar"></i> May 10, 2026</span>
+                        <span><i class="fas fa-clock"></i> 8 min read</span>
+                    </div>
+                    <h2 class="blog-card-title">5 Calculation Techniques to Sharpen Your Chess Thinking</h2>
+                    <p class="blog-card-excerpt">Master the art of tactical calculation with these proven methods used by top players and coaches worldwide. Whether you're a beginner or an advanced player, these techniques will transform how you see the board and identify threats before your opponent does.</p>
+                    <div class="blog-card-footer">
+                        <div class="blog-card-author">
+                            <div class="author-avatar">TM</div>
+                            <span class="author-name">T. Muthukumar</span>
+                        </div>
+                        <span class="blog-read-link">Read Article <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 2 — Strategy -->
+            <article class="blog-card fade-up visible" data-cat="strategy"
+                     data-title="The Art of Strategic Pawn Structures in Chess"
+                     data-excerpt="Understand how pawn structures define your middlegame plans and how to exploit weaknesses in your opponent's position."
+                     onclick="window.location='blog/strategic-pawn-structures.html'">
+                <div class="blog-card-img cat-strategy">
+                    <div class="blog-card-img-inner">
+                        <span class="piece">♟</span>
+                    </div>
+                    <span class="blog-card-badge">Chess Strategy</span>
+                </div>
+                <div class="blog-card-body">
+                    <div class="blog-card-meta">
+                        <span><i class="fas fa-calendar"></i> May 5, 2026</span>
+                        <span><i class="fas fa-clock"></i> 6 min read</span>
+                    </div>
+                    <h2 class="blog-card-title">The Art of Strategic Pawn Structures in Chess</h2>
+                    <p class="blog-card-excerpt">Understand how pawn structures define your middlegame plans and how to exploit weaknesses in your opponent's position.</p>
+                    <div class="blog-card-footer">
+                        <div class="blog-card-author">
+                            <div class="author-avatar">TM</div>
+                            <span class="author-name">T. Muthukumar</span>
+                        </div>
+                        <span class="blog-read-link">Read Article <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 3 — Opening -->
+            <article class="blog-card fade-up visible" data-cat="opening"
+                     data-title="Opening Principles: Why Your First 10 Moves Define the Game"
+                     data-excerpt="Most games are won or lost in the opening. Learn the timeless principles that every strong player follows from move one."
+                     onclick="window.location='blog/opening-principles.html'">
+                <div class="blog-card-img cat-opening">
+                    <div class="blog-card-img-inner">
+                        <span class="piece">♗</span>
+                    </div>
+                    <span class="blog-card-badge">Opening Principles</span>
+                </div>
+                <div class="blog-card-body">
+                    <div class="blog-card-meta">
+                        <span><i class="fas fa-calendar"></i> Apr 28, 2026</span>
+                        <span><i class="fas fa-clock"></i> 5 min read</span>
+                    </div>
+                    <h2 class="blog-card-title">Opening Principles: Why Your First 10 Moves Define the Game</h2>
+                    <p class="blog-card-excerpt">Most games are won or lost in the opening. Learn the timeless principles that every strong player follows from move one.</p>
+                    <div class="blog-card-footer">
+                        <div class="blog-card-author">
+                            <div class="author-avatar">TM</div>
+                            <span class="author-name">T. Muthukumar</span>
+                        </div>
+                        <span class="blog-read-link">Read Article <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 4 — Endgame -->
+            <article class="blog-card fade-up visible" data-cat="endgame"
+                     data-title="King and Pawn Endgames: Master the Opposition"
+                     data-excerpt="The endgame is where precision wins games. Learn the concept of opposition and key techniques every club player must know."
+                     onclick="window.location='blog/king-pawn-endgames.html'">
+                <div class="blog-card-img cat-endgame">
+                    <div class="blog-card-img-inner">
+                        <span class="piece">♚</span>
+                    </div>
+                    <span class="blog-card-badge">Endgames</span>
+                </div>
+                <div class="blog-card-body">
+                    <div class="blog-card-meta">
+                        <span><i class="fas fa-calendar"></i> Apr 20, 2026</span>
+                        <span><i class="fas fa-clock"></i> 7 min read</span>
+                    </div>
+                    <h2 class="blog-card-title">King and Pawn Endgames: Master the Opposition</h2>
+                    <p class="blog-card-excerpt">The endgame is where precision wins games. Learn the concept of opposition and key techniques every club player must know.</p>
+                    <div class="blog-card-footer">
+                        <div class="blog-card-author">
+                            <div class="author-avatar">TM</div>
+                            <span class="author-name">T. Muthukumar</span>
+                        </div>
+                        <span class="blog-read-link">Read Article <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 5 — Psychology -->
+            <article class="blog-card fade-up visible" data-cat="psychology"
+                     data-title="How to Manage Nerves and Stay Calm During Tournaments"
+                     data-excerpt="Tournament pressure affects even the strongest players. Here are proven mental techniques to keep your mind sharp under pressure."
+                     onclick="window.location='blog/tournament-psychology.html'">
+                <div class="blog-card-img cat-psychology">
+                    <div class="blog-card-img-inner">
+                        <span class="piece">♛</span>
+                    </div>
+                    <span class="blog-card-badge">Tournament Psychology</span>
+                </div>
+                <div class="blog-card-body">
+                    <div class="blog-card-meta">
+                        <span><i class="fas fa-calendar"></i> Apr 12, 2026</span>
+                        <span><i class="fas fa-clock"></i> 4 min read</span>
+                    </div>
+                    <h2 class="blog-card-title">How to Manage Nerves and Stay Calm During Tournaments</h2>
+                    <p class="blog-card-excerpt">Tournament pressure affects even the strongest players. Here are proven mental techniques to keep your mind sharp under pressure.</p>
+                    <div class="blog-card-footer">
+                        <div class="blog-card-author">
+                            <div class="author-avatar">TM</div>
+                            <span class="author-name">T. Muthukumar</span>
+                        </div>
+                        <span class="blog-read-link">Read Article <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 6 — Student Story -->
+            <article class="blog-card fade-up visible" data-cat="student"
+                     data-title="From Beginner to Tournament Winner: A Student's Chess Journey"
+                     data-excerpt="How structured training, consistent practice, and the right mindset helped one of our students go from a beginner to a district champion."
+                     onclick="window.location='blog/student-improvement-story.html'">
+                <div class="blog-card-img cat-student">
+                    <div class="blog-card-img-inner">
+                        <span class="piece">♜</span>
+                    </div>
+                    <span class="blog-card-badge">Student Improvement</span>
+                </div>
+                <div class="blog-card-body">
+                    <div class="blog-card-meta">
+                        <span><i class="fas fa-calendar"></i> Apr 5, 2026</span>
+                        <span><i class="fas fa-clock"></i> 6 min read</span>
+                    </div>
+                    <h2 class="blog-card-title">From Beginner to Tournament Winner: A Student's Chess Journey</h2>
+                    <p class="blog-card-excerpt">How structured training, consistent practice, and the right mindset helped one of our students go from a beginner to a district champion.</p>
+                    <div class="blog-card-footer">
+                        <div class="blog-card-author">
+                            <div class="author-avatar">TM</div>
+                            <span class="author-name">T. Muthukumar</span>
+                        </div>
+                        <span class="blog-read-link">Read Article <i class="fas fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </article>
+
+        </div><!-- /blog-grid -->
+
+    </div><!-- /container -->
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <a href="index.html" class="footer-logo">
+                    <img src="images/SCHOOL OF CHESS.png" alt="School of Chess" class="logo-img">
+                    <span class="logo-text">School <span>of Chess</span></span>
+                </a>
+                <p class="footer-tagline">Structured Chess Training<br>for Long-Term Improvement</p>
+                <div class="footer-social">
+                    <a href="https://wa.me/917200530636" target="_blank" rel="noopener" aria-label="WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                    <a href="mailto:coach@schoolofchess.org" aria-label="Email">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html#about"><i class="fas fa-chevron-right"></i> About</a></li>
+                    <li><a href="index.html#programs"><i class="fas fa-chevron-right"></i> Programs</a></li>
+                    <li><a href="index.html#achievements"><i class="fas fa-chevron-right"></i> Achievements</a></li>
+                    <li><a href="blog.html"><i class="fas fa-chevron-right"></i> Blog</a></li>
+                    <li><a href="index.html#contact"><i class="fas fa-chevron-right"></i> Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Blog Categories</h4>
+                <ul>
+                    <li><a href="blog.html"><i class="fas fa-chevron-right"></i> Calculation Training</a></li>
+                    <li><a href="blog.html"><i class="fas fa-chevron-right"></i> Chess Strategy</a></li>
+                    <li><a href="blog.html"><i class="fas fa-chevron-right"></i> Opening Principles</a></li>
+                    <li><a href="blog.html"><i class="fas fa-chevron-right"></i> Endgames</a></li>
+                    <li><a href="blog.html"><i class="fas fa-chevron-right"></i> Student Stories</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul class="footer-contact-list">
+                    <li><i class="fas fa-map-marker-alt"></i> Sithalapakkam, Chennai – 600 126</li>
+                    <li><i class="fas fa-phone"></i> <a href="tel:+917200530636">+91 72005 30636</a></li>
+                    <li><i class="fas fa-envelope"></i> <a href="mailto:coach@schoolofchess.org">coach@schoolofchess.org</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 School of Chess. All rights reserved.</p>
+            <p>Built with <i class="fas fa-heart" style="color:#e53e3e;font-size:0.75rem;"></i> in Chennai</p>
+        </div>
+    </div>
+</footer>
+
+<!-- WhatsApp Float -->
+<a href="https://wa.me/917200530636?text=Hi%2C%20I%20want%20to%20know%20more%20about%20School%20of%20Chess"
+   class="whatsapp-float" target="_blank" rel="noopener" aria-label="Chat on WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+</a>
+
+<!-- Scripts -->
+<script src="js/main.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    var allCards = Array.from(document.querySelectorAll('.blog-card'));
+    var resultsCount = document.getElementById('resultsCount');
+    var noResults = document.getElementById('noResults');
+    var searchInput = document.getElementById('blogSearch');
+    var currentCat = 'all';
+    var currentSearch = '';
+
+    function updateGrid() {
+        var visible = 0;
+        allCards.forEach(function (card) {
+            var cat   = card.getAttribute('data-cat');
+            var title = (card.getAttribute('data-title') || '').toLowerCase();
+            var exc   = (card.getAttribute('data-excerpt') || '').toLowerCase();
+            var matchCat    = currentCat === 'all' || cat === currentCat;
+            var matchSearch = currentSearch === '' || title.includes(currentSearch) || exc.includes(currentSearch);
+
+            if (matchCat && matchSearch) {
+                card.classList.remove('hidden');
+                visible++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        resultsCount.innerHTML = '<strong>' + visible + '</strong> article' + (visible !== 1 ? 's' : '') + ' found';
+        noResults.style.display = visible === 0 ? 'block' : 'none';
+
+        /* Remove featured class when filtering so layout doesn't break */
+        var firstVisible = allCards.find(function(c){ return !c.classList.contains('hidden'); });
+        allCards.forEach(function(c){ c.classList.remove('featured'); });
+        if (currentCat === 'all' && currentSearch === '' && firstVisible) {
+            firstVisible.classList.add('featured');
+        }
+    }
+
+    /* Filter by category */
+    window.filterPosts = function (btn) {
+        document.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        currentCat = btn.getAttribute('data-cat');
+        updateGrid();
+    };
+
+    /* Search */
+    window.doSearch = function () {
+        currentSearch = searchInput.value.trim().toLowerCase();
+        updateGrid();
+    };
+
+    searchInput.addEventListener('keyup', function (e) {
+        if (e.key === 'Enter') { doSearch(); return; }
+        currentSearch = this.value.trim().toLowerCase();
+        updateGrid();
+    });
+
+    /* Mark blog nav link active */
+    document.querySelectorAll('.nav-links a').forEach(function(a){
+        if (a.href === window.location.href) a.classList.add('active');
+    });
+})();
+</script>
+
+</body>
+</html>

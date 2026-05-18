@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Board | School of Chess – Study Positions & Master Games</title>
+    <meta name="description" content="Interactive chess analysis board with Stockfish engine. Study positions, replay classic master games, and train with guess-the-move mode.">
+    <meta name="keywords" content="chess analysis board, chess engine, stockfish, chess study, master games, chess training tool">
+    <meta name="author" content="School of Chess – T. Muthukumar">
+    <meta property="og:title" content="Analysis Board | School of Chess">
+    <meta property="og:description" content="Interactive chess analysis board with Stockfish engine. Study positions, replay classic master games.">
+    <meta property="og:url" content="https://www.schoolofchess.org/analysis.html">
+    <meta property="og:type" content="website">
+    <link rel="canonical" href="https://www.schoolofchess.org/analysis.html">
+
+    <!-- Google Analytics GA4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-H3VFSQHK1L"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-H3VFSQHK1L');
+    </script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="images/SCHOOL OF CHESS.png">
+
+    <!-- DNS prefetch for CDN domains — reduces latency on first visit -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- chessboard.js CSS — jsDelivr (reliable CDN) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+
+    <!-- Site Stylesheets (blog.css NOT loaded here — not needed on analysis page) -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/analysis.css?v=14">
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<header id="navbar">
+    <nav class="container nav-inner">
+        <a href="index.html" class="logo">
+            <img src="images/SCHOOL OF CHESS.png" alt="School of Chess Logo" class="logo-img">
+            <span class="logo-text">School <span>of Chess</span></span>
+        </a>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="index.html#about">About</a></li>
+            <li><a href="index.html#programs">Programs</a></li>
+            <li><a href="index.html#achievements">Achievements</a></li>
+            <li><a href="index.html#reviews">Reviews</a></li>
+            <li><a href="blog.html">Blog</a></li>
+            <li><a href="analysis.html" class="active">Analysis</a></li>
+            <li><a href="index.html#contact">Contact</a></li>
+            <li>
+                <a href="https://wa.me/917200530636?text=Hi%2C%20I%20want%20to%20know%20more%20about%20School%20of%20Chess"
+                   class="btn btn-primary btn-nav" target="_blank" rel="noopener">
+                    <i class="fab fa-whatsapp"></i> Free Trial
+                </a>
+            </li>
+        </ul>
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+    </nav>
+</header>
+
+<!-- ===== ANALYSIS PAGE WRAP ===== -->
+<div class="analysis-page-wrap">
+
+    <!-- Compact Topbar (replaces large hero — Lichess style) -->
+    <div class="analysis-topbar" id="analysisTopbar">
+        <div class="analysis-topbar-inner">
+            <div class="topbar-brand">
+                <i class="fas fa-chess-board topbar-icon"></i>
+                <span class="topbar-title">Analysis Board</span>
+            </div>
+
+            <div class="topbar-sep"></div>
+
+            <div class="topbar-cta-group">
+                <!-- Games toggle — hidden until a multi-game PGN is loaded -->
+                <button class="topbar-btn topbar-btn-games" id="btnToggleGameList"
+                        onclick="toggleGameListPanel()" title="Show/hide game list"
+                        style="display:none">
+                    <i class="fas fa-list"></i>
+                    <span id="topbarGamesLabel">Games</span>
+                    <span class="topbar-games-badge" id="topbarGamesBadge">0</span>
+                </button>
+                <button class="topbar-btn" onclick="document.getElementById('btnImportPGN').click()" title="Load PGN game">
+                    <i class="fas fa-file-import"></i><span class="btn-label"> Load PGN</span>
+                </button>
+                <button class="topbar-btn" onclick="document.getElementById('btnImportFEN').click()" title="Paste FEN position">
+                    <i class="fas fa-chess-board"></i><span class="btn-label"> Paste FEN</span>
+                </button>
+                <button class="topbar-btn topbar-btn-gold" onclick="document.getElementById('btnTrainMode').click()" title="Train Like Masters — guess grandmaster moves">
+                    <i class="fas fa-graduation-cap"></i><span class="btn-label"> Train</span>
+                </button>
+            </div>
+
+            <div class="topbar-shortcuts">
+                <span class="topbar-shortcut"><kbd>←</kbd><kbd>→</kbd> Navigate</span>
+                <span class="topbar-shortcut"><kbd>F</kbd> Flip</span>
+                <span class="topbar-shortcut"><kbd>Home</kbd><kbd>End</kbd> Jump</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== WORKSPACE OUTER — viewport-height fitting ===== -->
+    <div class="analysis-workspace-outer" id="workspaceOuter">
+        <div class="analysis-workspace">
+
+            <!-- 0. Game List Panel (left sidebar — shown when multi-game PGN loaded) -->
+            <div class="game-list-col" id="gameListCol" style="display:none">
+                <div class="game-list-panel">
+                    <div class="gl-header">
+                        <span class="gl-title">
+                            <i class="fas fa-database"></i>
+                            Games&nbsp;<span class="gl-count" id="glCount">0</span>
+                        </span>
+                        <button class="gl-close-btn" id="btnCloseGameList" title="Close game list">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="gl-search-wrap">
+                        <i class="fas fa-search gl-search-icon"></i>
+                        <input type="text" id="glSearchInput"
+                               class="gl-search-input"
+                               placeholder="Search player, event…">
+                    </div>
+                    <div class="gl-list" id="glList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1. Eval Bar Column -->
+            <div class="eval-bar-col">
+                <div class="eval-bar" id="evalBar">
+                    <div class="eval-black-fill" id="evalBlackFill"></div>
+                    <div class="eval-white-fill" id="evalWhiteFill"></div>
+                    <span class="eval-score-top" id="evalScoreTop"></span>
+                    <span class="eval-score-bot" id="evalScoreBot"></span>
+                </div>
+                <div class="eval-labels">
+                    <span title="Black advantage">&#9823;</span>
+                    <span title="White advantage">&#9817;</span>
+                </div>
+            </div>
+
+            <!-- 2. Board Column -->
+            <div class="board-col">
+
+                <!-- Status bar -->
+                <div class="board-status" id="boardStatus">Starting position</div>
+
+                <!-- Chessboard — wrapped in premium card -->
+                <div class="board-card">
+                    <div id="chessboard"></div>
+                </div>
+
+                <!-- Board Navigation Controls -->
+                <div class="board-controls">
+                    <button id="btnFirst"  title="Go to start (Home)"><i class="fas fa-step-backward"></i><i class="fas fa-step-backward" style="margin-left:-6px;"></i></button>
+                    <button id="btnPrev"   title="Previous move (←)"><i class="fas fa-step-backward"></i></button>
+                    <button id="btnNext"   title="Next move (→)"><i class="fas fa-step-forward"></i></button>
+                    <button id="btnLast"   title="Go to end (End)"><i class="fas fa-step-forward"></i><i class="fas fa-step-forward" style="margin-left:-6px;"></i></button>
+                    <div class="ctrl-divider"></div>
+                    <button id="btnFlip"   title="Flip board (F)"><i class="fas fa-sync-alt"></i></button>
+                    <button id="btnUndo"   title="Undo move"><i class="fas fa-undo"></i></button>
+                    <button id="btnReset"  title="Reset to start"><i class="fas fa-home"></i></button>
+                    <div class="ctrl-divider"></div>
+                    <button id="btnFullscreen" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                </div>
+
+                <!-- Board Editor Palette (shown in editor mode only) -->
+                <div class="editor-palette-wrap" id="editorPaletteWrap" style="display:none">
+                    <div class="editor-palette-header">
+                        <span class="editor-mode-label"><i class="fas fa-pencil-alt"></i> Board Editor</span>
+                        <div class="editor-palette-btns">
+                            <button id="btnEditorClearBoard" title="Clear all pieces"><i class="fas fa-trash-alt"></i> Clear</button>
+                            <button id="btnEditorStartPos"   title="Reset to starting position"><i class="fas fa-chess"></i> Start</button>
+                            <button id="btnEditorDone" class="editor-done-btn"><i class="fas fa-check"></i> Done</button>
+                        </div>
+                    </div>
+                    <div class="editor-palette-pieces" id="editorPaletteItems">
+                        <!-- Populated by JS -->
+                    </div>
+                    <p class="editor-palette-hint">
+                        <i class="fas fa-info-circle"></i>
+                        Click a piece above to select, then click any square to place it.
+                        Drag pieces freely. Click an occupied square (no piece selected) to remove it.
+                    </p>
+                </div>
+
+            </div><!-- /board-col -->
+
+            <!-- 3. Right Panel -->
+            <div class="analysis-right-panel">
+
+                <!-- ── NORMAL ANALYSIS CONTENT ── -->
+                <div class="rp-normal-wrap" id="rpNormalWrap">
+
+                    <!-- Side to move indicator -->
+                    <div class="side-to-move-card">
+                        <div class="side-circle-wrap">
+                            <div class="side-circle white-turn" id="sideCircle"></div>
+                            <div class="side-move-info">
+                                <span class="side-move-label" id="sideMoveLabel">White to Move</span>
+                                <span class="side-move-num"   id="sideMoveNum">Move 1</span>
+                            </div>
+                        </div>
+                        <div class="game-result-badge" id="gameResultBadge" style="display:none"></div>
+                    </div>
+
+                    <!-- Engine card -->
+                    <div class="engine-card" id="engineCard">
+                        <div class="engine-header">
+                            <div class="engine-title-row">
+                                <i class="fas fa-microchip"></i>
+                                <span>Stockfish</span>
+                                <span class="engine-depth-badge" id="engineDepthBadge">OFF</span>
+                            </div>
+                            <label class="engine-switch" title="Toggle Stockfish engine">
+                                <input type="checkbox" id="engineToggle">
+                                <span class="engine-switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="engine-lines-wrap" id="engineLinesWrap">
+                            <p class="engine-off-msg">Enable engine for analysis</p>
+                        </div>
+                    </div>
+
+                    <!-- Notation card -->
+                    <div class="notation-card">
+                        <div class="notation-card-header">
+                            <span><i class="fas fa-list-ol"></i> Notation</span>
+                            <button id="toggleNotationBtn" class="notation-hide-btn">
+                                <i class="fas fa-eye-slash"></i> Hide
+                            </button>
+                        </div>
+                        <div class="guess-hint" id="guessHint" style="display:none">
+                            <div class="guess-hint-inner">
+                                <i class="fas fa-brain"></i>
+                                <span>Guess the next move!</span>
+                            </div>
+                            <div class="train-stats-row" id="trainStatsRow">
+                                <div class="train-stat-item">
+                                    <span class="train-stat-val" id="statStreak">0</span>
+                                    <span class="train-stat-label"><i class="fas fa-fire"></i> Streak</span>
+                                </div>
+                                <div class="train-stat-divider"></div>
+                                <div class="train-stat-item">
+                                    <span class="train-stat-val" id="statAccuracy">—</span>
+                                    <span class="train-stat-label"><i class="fas fa-bullseye"></i> Accuracy</span>
+                                </div>
+                                <div class="train-stat-divider"></div>
+                                <div class="train-stat-item">
+                                    <span class="train-stat-val" id="statMoves">0</span>
+                                    <span class="train-stat-label"><i class="fas fa-chess-pawn"></i> Guesses</span>
+                                </div>
+                            </div>
+                            <div class="guess-result" id="guessResult"></div>
+                        </div>
+                        <div class="move-list-scroll" id="moveListScroll">
+                            <div class="move-list" id="moveList">
+                                <span class="move-list-empty">Make a move to start</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tools card -->
+                    <div class="tools-card">
+                        <button id="btnImportFEN"  class="tool-btn"><i class="fas fa-upload"></i> FEN</button>
+                        <button id="btnImportPGN"  class="tool-btn"><i class="fas fa-file-import"></i> PGN</button>
+                        <button id="btnCopyPGN"    class="tool-btn"><i class="fas fa-copy"></i> Copy PGN</button>
+                        <button id="btnEditorMode" class="tool-btn"><i class="fas fa-pencil-alt"></i> Edit</button>
+                        <button id="btnTrainMode"  class="tool-btn tool-btn-gold"><i class="fas fa-graduation-cap"></i> Replay Training</button>
+                    </div>
+
+                </div><!-- /rp-normal-wrap -->
+
+                <!-- ── REPLAY TRAINING PANEL (overlays normal when active) ── -->
+                <div class="rp-training-wrap" id="rpTrainingWrap" style="display:none">
+
+                    <!-- Header: side badge + live score -->
+                    <div class="tp-header">
+                        <div class="tp-side-badge" id="tpSideBadge">
+                            <div class="tp-side-circle" id="tpSideCircle"></div>
+                            <div class="tp-side-text">
+                                <span class="tp-side-role" id="tpSideRole">Playing as White</span>
+                                <span class="tp-side-player" id="tpSidePlayer"></span>
+                            </div>
+                        </div>
+                        <div class="tp-score-display">
+                            <svg class="tp-ring-svg" viewBox="0 0 44 44">
+                                <circle class="tp-ring-bg"   cx="22" cy="22" r="18"/>
+                                <circle class="tp-ring-fill" cx="22" cy="22" r="18" id="tpRingFill"/>
+                            </svg>
+                            <div class="tp-ring-label">
+                                <span class="tp-score-val" id="tpScoreVal">100</span>
+                                <span class="tp-score-pct">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Move comparison card (shown after every user move) -->
+                    <div class="tp-comparison" id="tpComparison" style="display:none">
+                        <div class="tp-quality-banner" id="tpQualityBanner">
+                            <i class="tp-quality-icon" id="tpQualityIcon"></i>
+                            <span id="tpQualityLabel">Excellent!</span>
+                        </div>
+                        <div class="tp-moves-grid">
+                            <div class="tp-move-row tp-user-row">
+                                <span class="tp-move-who"><i class="fas fa-user"></i> Your Move</span>
+                                <span class="tp-move-san" id="tpUserSAN">—</span>
+                                <span class="tp-move-tag" id="tpUserTag"></span>
+                            </div>
+                            <div class="tp-move-row tp-game-row">
+                                <span class="tp-move-who"><i class="fas fa-crown"></i> Game Move</span>
+                                <span class="tp-move-san" id="tpGameSAN">—</span>
+                                <span class="tp-move-tag" id="tpGameTag"></span>
+                            </div>
+                            <div class="tp-move-row tp-engine-row">
+                                <span class="tp-move-who"><i class="fas fa-microchip"></i> Engine Best</span>
+                                <span class="tp-move-san" id="tpEngineSAN">—</span>
+                                <span class="tp-move-eval" id="tpEngineEval"></span>
+                            </div>
+                        </div>
+                        <div class="tp-cpl-row">
+                            <span class="tp-cpl-label">Centipawn loss</span>
+                            <span class="tp-cpl-val" id="tpCplVal">0</span>
+                            <span class="tp-pts-change" id="tpPtsChange"></span>
+                        </div>
+                        <p class="tp-feedback-text" id="tpFeedbackText"></p>
+                    </div>
+
+                    <!-- Waiting for user move -->
+                    <div class="tp-waiting" id="tpWaiting">
+                        <div class="tp-waiting-icon">
+                            <i class="fas fa-chess-knight"></i>
+                        </div>
+                        <p class="tp-waiting-title">Guess the next move!</p>
+                        <p class="tp-waiting-sub" id="tpWaitingSub">Drag your piece on the board</p>
+                    </div>
+
+                    <!-- Evaluating state -->
+                    <div class="tp-evaluating" id="tpEvaluating" style="display:none">
+                        <div class="tp-eval-spinner"></div>
+                        <span>Engine evaluating…</span>
+                    </div>
+
+                    <!-- Auto-playing opponent -->
+                    <div class="tp-auto-play" id="tpAutoPlay" style="display:none">
+                        <i class="fas fa-robot"></i>
+                        <span id="tpAutoPlayText">Opponent plays…</span>
+                    </div>
+
+                    <!-- Retry prompt (shown when player makes mistake/blunder) -->
+                    <div class="tp-retry-prompt" id="tpRetryPrompt" style="display:none">
+                        <div class="tp-retry-icon"><i class="fas fa-lightbulb"></i></div>
+                        <p class="tp-retry-title" id="tpRetryTitle">There's a stronger move!</p>
+                        <p class="tp-retry-sub"   id="tpRetrySub">Think deeper — you have 2 more tries.</p>
+                        <div class="tp-retry-dots" id="tpRetryDots"></div>
+                    </div>
+                    <!-- Shared hint area (used in both waiting and retry phases) -->
+                    <div class="tp-hint-reveal" id="tpHintReveal" style="display:none">
+                        <div class="tp-hint-text" id="tpHintText"></div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="tp-actions" id="tpActions">
+                        <button class="tp-btn tp-btn-hint"     id="btnTpHint">
+                            <i class="fas fa-lightbulb"></i> Hint
+                        </button>
+                        <button class="tp-btn tp-btn-reveal"   id="btnTpReveal">
+                            <i class="fas fa-eye"></i> Show Move
+                        </button>
+                        <button class="tp-btn tp-btn-retry"    id="btnTpRetry"    style="display:none">
+                            <i class="fas fa-redo-alt"></i> Retry
+                        </button>
+                        <button class="tp-btn tp-btn-continue" id="btnTpContinue" style="display:none">
+                            <i class="fas fa-arrow-right"></i> Continue
+                        </button>
+                    </div>
+
+                    <!-- Live stats bar -->
+                    <div class="tp-live-stats">
+                        <div class="tp-stat">
+                            <span class="tp-stat-val" id="tpsAccuracy">—</span>
+                            <span class="tp-stat-lbl">Accuracy</span>
+                        </div>
+                        <div class="tp-stat-sep"></div>
+                        <div class="tp-stat">
+                            <span class="tp-stat-val" id="tpsCpl">0</span>
+                            <span class="tp-stat-lbl">Avg CPL</span>
+                        </div>
+                        <div class="tp-stat-sep"></div>
+                        <div class="tp-stat">
+                            <span class="tp-stat-val" id="tpsMoves">0</span>
+                            <span class="tp-stat-lbl">Moves</span>
+                        </div>
+                        <div class="tp-stat-sep"></div>
+                        <div class="tp-stat">
+                            <span class="tp-stat-val tp-stat-gold" id="tpsExcellent">0</span>
+                            <span class="tp-stat-lbl">⭐ Best</span>
+                        </div>
+                    </div>
+
+                    <!-- Move quality strip -->
+                    <div class="tp-quality-strip" id="tpQualityStrip"></div>
+
+                    <!-- Replay speed selector -->
+                    <div class="tp-speed-row">
+                        <span class="tp-speed-label"><i class="fas fa-tachometer-alt"></i> Speed</span>
+                        <div class="tp-speed-btns">
+                            <button class="tp-speed-btn" data-speed="fast"   title="Fast — 0.8s">⚡ Fast</button>
+                            <button class="tp-speed-btn" data-speed="normal" title="Normal — 1.8s">▶ Normal</button>
+                            <button class="tp-speed-btn" data-speed="slow"   title="Slow — 3s">🐢 Slow</button>
+                        </div>
+                    </div>
+
+                    <!-- End training -->
+                    <button class="tp-end-btn" id="btnTpEnd">
+                        <i class="fas fa-flag-checkered"></i> End Training
+                    </button>
+
+                </div><!-- /rp-training-wrap -->
+
+            </div><!-- /right panel -->
+
+        </div><!-- /analysis-workspace -->
+    </div><!-- /analysis-workspace-outer -->
+
+    <!-- Classic Games Section -->
+    <div class="classic-games-section">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fas fa-crown"></i> Master Games</div>
+                <h2 class="section-title">Classic Games Library</h2>
+                <p class="section-desc">Load and study legendary games move by move. Activate <strong>Train Mode</strong> to guess each move like a grandmaster.</p>
+            </div>
+            <div class="classic-games-grid" id="classicGamesGrid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+</div><!-- /analysis-page-wrap -->
+
+<!-- ===== FEN Modal ===== -->
+<div class="analysis-modal-overlay" id="fenModal">
+    <div class="analysis-modal">
+        <div class="analysis-modal-header">
+            <h3><i class="fas fa-upload"></i> Import / Export FEN</h3>
+            <button class="analysis-modal-close" data-close="fenModal">&#x2715;</button>
+        </div>
+        <label class="modal-field-label">Current FEN</label>
+        <textarea id="fenCurrentDisplay" class="fen-current-display" readonly></textarea>
+        <label class="modal-field-label" style="margin-top:1rem;">Load a new FEN position</label>
+        <textarea id="fenInput" placeholder="Paste FEN string here…&#10;e.g. rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"></textarea>
+        <div class="analysis-modal-footer">
+            <button id="btnLoadFEN" class="btn btn-primary">Load Position</button>
+            <button id="btnCopyFEN" class="btn btn-outline-modal"><i class="fas fa-copy"></i> Copy Current</button>
+            <button data-close="fenModal" class="btn btn-outline-modal">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== PGN Modal — Professional File Loader ===== -->
+<div class="analysis-modal-overlay" id="pgnModal">
+    <div class="analysis-modal pgn-loader-modal">
+        <div class="analysis-modal-header">
+            <h3><i class="fas fa-database"></i> Load PGN Game(s)</h3>
+            <button class="analysis-modal-close" data-close="pgnModal">&#x2715;</button>
+        </div>
+
+        <!-- Hidden native file input -->
+        <input type="file" id="pgnFileInput" accept=".pgn,.txt,text/plain"
+               style="display:none" multiple>
+
+        <!-- Drop zone -->
+        <div class="pgn-dropzone" id="pgnDropZone">
+            <div class="pgn-dz-icon"><i class="fas fa-file-chess"></i></div>
+            <div class="pgn-dz-title">Drop PGN file(s) here</div>
+            <div class="pgn-dz-sub">Supports single games and full databases (100–1000+ games)</div>
+            <button type="button" class="pgn-browse-btn" id="btnBrowsePGN">
+                <i class="fas fa-folder-open"></i> Browse Files
+            </button>
+            <!-- File loaded feedback (shown after file selected) -->
+            <div class="pgn-file-info" id="pgnFileInfo" style="display:none">
+                <i class="fas fa-check-circle pgn-fi-icon"></i>
+                <div class="pgn-fi-details">
+                    <span class="pgn-fi-name" id="pgnFileName">—</span>
+                    <span class="pgn-fi-games" id="pgnFileGames">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="pgn-or-divider"><span>or paste PGN text</span></div>
+
+        <!-- Paste textarea -->
+        <textarea id="pgnInput" class="pgn-textarea"
+                  placeholder="[Event &quot;Paris Opera&quot;]&#10;[White &quot;Paul Morphy&quot;]&#10;[Black &quot;Duke of Brunswick&quot;]&#10;[Result &quot;1-0&quot;]&#10;&#10;1. e4 e5 2. Nf3 d6 3. d4 ...&#10;&#10;[Event &quot;Next Game...&quot;]&#10;..."></textarea>
+
+        <div class="analysis-modal-footer">
+            <button id="btnLoadPGN" class="btn btn-primary">
+                <i class="fas fa-play"></i> Load Game(s)
+            </button>
+            <button data-close="pgnModal" class="btn btn-outline-modal">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TRAINING SETUP MODAL ===== -->
+<div class="analysis-modal-overlay" id="trainSetupModal">
+    <div class="analysis-modal train-setup-modal">
+        <div class="analysis-modal-header">
+            <h3><i class="fas fa-graduation-cap"></i> Replay Training</h3>
+            <button class="analysis-modal-close" data-close="trainSetupModal">&#x2715;</button>
+        </div>
+
+        <div class="tsm-game-card" id="tsmGameCard">
+            <div class="tsm-game-event" id="tsmGameEvent">Game Loaded</div>
+            <div class="tsm-game-players" id="tsmGamePlayers">White vs Black</div>
+        </div>
+
+        <p class="tsm-choose-label">Choose your side:</p>
+
+        <div class="tsm-side-grid">
+            <button class="tsm-side-btn" id="tsmBtnWhite">
+                <span class="tsm-side-piece">♔</span>
+                <span class="tsm-side-name">Play as White</span>
+                <span class="tsm-side-player" id="tsmWhitePlayer">—</span>
+            </button>
+            <button class="tsm-side-btn tsm-side-btn-black" id="tsmBtnBlack">
+                <span class="tsm-side-piece">♚</span>
+                <span class="tsm-side-name">Play as Black</span>
+                <span class="tsm-side-player" id="tsmBlackPlayer">—</span>
+            </button>
+        </div>
+
+        <p class="tsm-desc">
+            <i class="fas fa-info-circle"></i>
+            Guess each move for your side. The engine evaluates your move against the master game.
+            <strong>Smart scoring</strong> — strong alternatives are rewarded, not just exact matches.
+        </p>
+    </div>
+</div>
+
+<!-- ===== TRAINING REPORT MODAL ===== -->
+<div class="analysis-modal-overlay" id="trainReportModal">
+    <div class="analysis-modal train-report-modal">
+        <div class="analysis-modal-header">
+            <h3><i class="fas fa-trophy"></i> Training Complete!</h3>
+            <button class="analysis-modal-close" data-close="trainReportModal">&#x2715;</button>
+        </div>
+
+        <!-- Accuracy ring + grade -->
+        <div class="trm-hero">
+            <div class="trm-ring-wrap">
+                <svg class="trm-ring-svg" viewBox="0 0 120 120">
+                    <circle class="trm-ring-bg"   cx="60" cy="60" r="50"/>
+                    <circle class="trm-ring-fill" cx="60" cy="60" r="50" id="trmRingFill"/>
+                </svg>
+                <div class="trm-ring-center">
+                    <span class="trm-pct" id="trmPct">0%</span>
+                    <span class="trm-pct-lbl">Accuracy</span>
+                </div>
+            </div>
+            <div class="trm-grade-wrap">
+                <div class="trm-grade" id="trmGrade">—</div>
+                <div class="trm-grade-lbl" id="trmGradeLbl">—</div>
+            </div>
+        </div>
+
+        <!-- Key stats -->
+        <div class="trm-stats-row" id="trmStatsRow">
+            <!-- populated by JS -->
+        </div>
+
+        <!-- Move quality breakdown -->
+        <div class="trm-breakdown">
+            <div class="trm-breakdown-title">Move Breakdown</div>
+            <div class="trm-quality-bars" id="trmQualityBars">
+                <!-- populated by JS -->
+            </div>
+        </div>
+
+        <!-- Notable moments -->
+        <div class="trm-moments" id="trmMoments" style="display:none">
+            <div class="trm-moments-title">Notable Moments</div>
+            <div class="trm-moments-list" id="trmMomentsList"></div>
+        </div>
+
+        <div class="analysis-modal-footer" style="margin-top:1.25rem">
+            <button id="btnTrainAgain" class="btn btn-primary">
+                <i class="fas fa-redo"></i> Train Again
+            </button>
+            <button data-close="trainReportModal" class="btn btn-outline-modal">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== POSITION SETUP MODAL (Board Editor → Done) ===== -->
+<div class="analysis-modal-overlay" id="positionSetupModal">
+    <div class="analysis-modal position-setup-modal">
+        <div class="analysis-modal-header">
+            <h3><i class="fas fa-chess-board"></i> Position Setup</h3>
+            <button class="analysis-modal-close" id="btnSetupClose">&#x2715;</button>
+        </div>
+
+        <!-- Validation banner -->
+        <div id="setupValidationBanner" class="setup-validation-banner" style="display:none"></div>
+
+        <!-- Side to move -->
+        <div class="setup-section">
+            <div class="setup-section-label"><i class="fas fa-user-alt"></i> Side to Move</div>
+            <div class="setup-side-btns">
+                <button class="setup-side-btn active" id="setupSideWhite" data-side="w">
+                    <span class="setup-king-icon">♔</span> White to Move
+                </button>
+                <button class="setup-side-btn" id="setupSideBlack" data-side="b">
+                    <span class="setup-king-icon">♚</span> Black to Move
+                </button>
+            </div>
+        </div>
+
+        <!-- Castling rights -->
+        <div class="setup-section">
+            <div class="setup-section-label"><i class="fas fa-chess-rook"></i> Castling Rights</div>
+            <div class="setup-castling-grid">
+                <label class="setup-check" id="castleWK-label">
+                    <input type="checkbox" id="castleWK" value="K">
+                    <span>♔ White O-O (King-side)</span>
+                </label>
+                <label class="setup-check" id="castleWQ-label">
+                    <input type="checkbox" id="castleWQ" value="Q">
+                    <span>♔ White O-O-O (Queen-side)</span>
+                </label>
+                <label class="setup-check" id="castleBK-label">
+                    <input type="checkbox" id="castleBK" value="k">
+                    <span>♚ Black O-O (King-side)</span>
+                </label>
+                <label class="setup-check" id="castleBQ-label">
+                    <input type="checkbox" id="castleBQ" value="q">
+                    <span>♚ Black O-O-O (Queen-side)</span>
+                </label>
+            </div>
+            <div id="castlingWarning" class="setup-inline-warn" style="display:none"></div>
+        </div>
+
+        <!-- En passant -->
+        <div class="setup-section">
+            <div class="setup-section-label"><i class="fas fa-crosshairs"></i> En Passant Target Square</div>
+            <select id="setupEPSelect" class="setup-select">
+                <option value="-">— None —</option>
+            </select>
+        </div>
+
+        <!-- Move counters -->
+        <div class="setup-section">
+            <div class="setup-section-label"><i class="fas fa-hashtag"></i> Move Counters</div>
+            <div class="setup-counters">
+                <div class="setup-counter-item">
+                    <label for="setupHalfmove">Halfmove Clock
+                        <span class="setup-counter-hint">(50-move rule)</span>
+                    </label>
+                    <input type="number" id="setupHalfmove" class="setup-number"
+                           min="0" max="999" value="0">
+                </div>
+                <div class="setup-counter-item">
+                    <label for="setupFullmove">Fullmove Number</label>
+                    <input type="number" id="setupFullmove" class="setup-number"
+                           min="1" max="9999" value="1">
+                </div>
+            </div>
+        </div>
+
+        <!-- FEN preview -->
+        <div class="setup-section">
+            <div class="setup-section-label"><i class="fas fa-code"></i> Generated FEN</div>
+            <div class="setup-fen-wrap">
+                <textarea id="setupFENPreview" class="setup-fen-preview" readonly
+                          placeholder="FEN will appear here…"></textarea>
+                <button id="btnSetupCopyFEN" class="setup-copy-btn" title="Copy FEN">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="analysis-modal-footer">
+            <button id="btnSetupConfirm" class="btn btn-primary" disabled>
+                <i class="fas fa-check"></i> Apply Position
+            </button>
+            <button id="btnSetupBackEdit" class="btn btn-outline-modal">
+                <i class="fas fa-arrow-left"></i> Back to Editor
+            </button>
+            <button id="btnSetupCancel" class="btn btn-outline-modal">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast notification -->
+<div class="analysis-toast" id="analysisToast"></div>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-col footer-brand">
+                <a href="index.html" class="footer-logo">
+                    <img src="images/SCHOOL OF CHESS.png" alt="School of Chess" class="footer-logo-img">
+                    <span>School <span>of Chess</span></span>
+                </a>
+                <p class="footer-tagline">Structured Chess Training<br>for Long-Term Improvement</p>
+                <div class="footer-social">
+                    <a href="https://wa.me/917200530636" target="_blank" rel="noopener" aria-label="WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                    <a href="mailto:coach@schoolofchess.org" aria-label="Email">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html#about"><i class="fas fa-chevron-right"></i> About</a></li>
+                    <li><a href="index.html#programs"><i class="fas fa-chevron-right"></i> Programs</a></li>
+                    <li><a href="index.html#achievements"><i class="fas fa-chevron-right"></i> Achievements</a></li>
+                    <li><a href="blog.html"><i class="fas fa-chevron-right"></i> Blog</a></li>
+                    <li><a href="analysis.html"><i class="fas fa-chevron-right"></i> Analysis Board</a></li>
+                    <li><a href="index.html#contact"><i class="fas fa-chevron-right"></i> Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Chess Tools</h4>
+                <ul>
+                    <li><a href="analysis.html"><i class="fas fa-chevron-right"></i> Analysis Board</a></li>
+                    <li><a href="analysis.html#classicGamesGrid"><i class="fas fa-chevron-right"></i> Classic Games</a></li>
+                    <li><a href="blog.html"><i class="fas fa-chevron-right"></i> Chess Blog</a></li>
+                    <li><a href="index.html#programs"><i class="fas fa-chevron-right"></i> Training Programs</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <ul class="footer-contact-list">
+                    <li><i class="fas fa-map-marker-alt"></i> Sithalapakkam, Chennai &ndash; 600 126</li>
+                    <li><i class="fas fa-phone"></i> <a href="tel:+917200530636">+91 72005 30636</a></li>
+                    <li><i class="fas fa-envelope"></i> <a href="mailto:coach@schoolofchess.org">coach@schoolofchess.org</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 School of Chess. All rights reserved.</p>
+            <p>Built with <i class="fas fa-heart" style="color:#e53e3e;font-size:0.75rem;"></i> in Chennai</p>
+        </div>
+    </div>
+</footer>
+
+<!-- WhatsApp Float -->
+<a href="https://wa.me/917200530636?text=Hi%2C%20I%20want%20to%20know%20more%20about%20School%20of%20Chess"
+   class="whatsapp-float" target="_blank" rel="noopener" aria-label="Chat on WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+</a>
+
+<!-- ===== SCRIPTS ===== -->
+<!-- jQuery (required by chessboard.js) -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<!-- chessboard.js — jsDelivr CDN (RELIABLE, fixes broken pieces) -->
+<script src="https://cdn.jsdelivr.net/npm/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<!-- chess.js for game logic (cdnjs — confirmed working) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<!-- Site scripts -->
+<script src="js/main.js"></script>
+<script src="js/analysis.js?v=14"></script>
+
+</body>
+</html>

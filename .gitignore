@@ -1,0 +1,16 @@
+# Windows
+Thumbs.db
+desktop.ini
+
+# Mac
+.DS_Store
+
+# Netlify leftovers
+.netlify/
+
+# Node (if you ever install packages)
+node_modules/
+
+# Editor files
+.vscode/
+*.log
