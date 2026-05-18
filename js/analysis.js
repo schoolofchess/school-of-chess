@@ -1813,6 +1813,11 @@ function _initChessboard(fen) {
   const initialSize = _computeBoardSize();
   if (chessEl) {
     chessEl.style.width = (initialSize > 0 ? initialSize : 400) + 'px';
+    // Force a synchronous layout flush so the browser computes the new
+    // width immediately. chessboard.js calls $(...).width() right inside
+    // Chessboard() — without this flush, it can still read 0 on some
+    // real-device rendering paths (race between style-set and layout).
+    void chessEl.offsetWidth;
   }
 
   // ── Step 2: Build and mount the board ──
@@ -1830,7 +1835,18 @@ function _initChessboard(fen) {
     onSnapEnd:      onSnapEnd,
   };
 
-  state.board = Chessboard('chessboard', cfg);
+  try {
+    state.board = Chessboard('chessboard', cfg);
+  } catch (e) {
+    console.error('[Analysis] Chessboard() init error:', e);
+    // Retry once after 300ms (handles race where jQuery/chessboard.js
+    // wasn't fully ready despite script order)
+    setTimeout(function() {
+      try { state.board = Chessboard('chessboard', cfg); } catch (e2) { /* silent */ }
+      if (state.board) { syncBoardSize(); _ensureBoardVisible(); }
+    }, 300);
+    return;
+  }
 
   // ── Step 3: ResizeObserver on board-card for reactive sizing ──
   // Fires whenever the card changes size (window resize, font load,
@@ -1871,31 +1887,87 @@ function _initChessboard(fen) {
 }
 
 /* =====================================================
+   VISIBLE-RECT HELPER
+   Computes the actual visible dimensions of an element by
+   intersecting its bounding rect with every overflow:hidden
+   ancestor up to <body>. Returns {width, height}.
+   Unlike getBoundingClientRect() alone (which returns the
+   element's OWN size even when clipped), this correctly
+   returns 0 when a parent overflow:hidden collapses the
+   visible area to nothing.
+   ===================================================== */
+function _getVisibleRect(el) {
+  var r = el.getBoundingClientRect();
+  var rect = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  var node = el.parentElement;
+  while (node && node !== document.documentElement) {
+    var cs = window.getComputedStyle(node);
+    var ov = cs.overflow + ' ' + cs.overflowX + ' ' + cs.overflowY;
+    if (/hidden|clip/.test(ov)) {
+      var nr = node.getBoundingClientRect();
+      rect.left   = Math.max(rect.left,   nr.left);
+      rect.top    = Math.max(rect.top,    nr.top);
+      rect.right  = Math.min(rect.right,  nr.right);
+      rect.bottom = Math.min(rect.bottom, nr.bottom);
+    }
+    node = node.parentElement;
+  }
+  return {
+    width:  Math.max(0, rect.right  - rect.left),
+    height: Math.max(0, rect.bottom - rect.top)
+  };
+}
+
+/* =====================================================
    BOARD VISIBILITY GUARD — production reliability fix
-   Handles the case where chessboard.js initialized before
-   the CSS grid laid out, resulting in a 0×0 invisible board.
-   Polls every 120ms (up to 25 attempts = 3 seconds) until
-   the board has a real visible size, then stops.
+   Handles two failure modes:
+   1. chessboard.js initialized with 0×0 (CSS grid race)
+   2. Board rendered correctly but clipped to 0 by an
+      ancestor overflow:hidden whose height collapsed
+      (detected via _getVisibleRect walking the DOM).
+   Polls every 125ms for up to 5 seconds, then stops.
    ===================================================== */
 function _ensureBoardVisible() {
-  const MAX_ATTEMPTS = 25;
-  const INTERVAL_MS  = 120;
-  let   attempts     = 0;
+  var MAX_ATTEMPTS = 40;   // 40 × 125ms = 5 seconds
+  var INTERVAL_MS  = 125;
+  var attempts     = 0;
 
   function check() {
-    if (!state.board) return;                       // board was destroyed
+    if (!state.board) return;
 
-    const chessEl = document.getElementById('chessboard');
+    var chessEl = document.getElementById('chessboard');
     if (!chessEl) return;
 
-    const visibleW = chessEl.offsetWidth;
-    const visibleH = chessEl.offsetHeight;
+    // ── A: Force workspace-outer height if CSS calc collapsed it ──
+    // This should never happen (calc is always > 200px on any real device)
+    // but acts as an absolute last-resort safety net.
+    var wo = document.getElementById('workspaceOuter');
+    if (wo && window.innerWidth > 768 && wo.clientHeight < 150) {
+      setLayoutVars();
+      var navEl2    = document.getElementById('navbar');
+      var topbarEl2 = document.getElementById('analysisTopbar');
+      var navH2   = (navEl2    && navEl2.offsetHeight    > 0) ? navEl2.offsetHeight    : 68;
+      var topbarH2= (topbarEl2 && topbarEl2.offsetHeight > 0) ? topbarEl2.offsetHeight : 56;
+      wo.style.height = Math.max(400, window.innerHeight - navH2 - topbarH2) + 'px';
+    }
 
-    if (visibleW > 50 && visibleH > 50) return;    // board is visible — done ✅
+    // ── B: Check actual visible area of the board element ──
+    // _getVisibleRect() intersects with all overflow:hidden ancestors,
+    // returning 0×0 if the board is clipped to invisible by any parent.
+    var vis = _getVisibleRect(chessEl);
+    if (vis.width > 100 && vis.height > 100) {
+      // Board IS visible and has area — sync eval bar and exit.
+      syncEvalBarHeight();
+      return;                                       // ✅ done
+    }
 
-    // Board still at 0×0 — force resize with current best size
-    const size = _computeBoardSize();
+    // ── C: Board is not visible — force-resize ──
+    // Either the board element itself is 0×0 (chessboard.js init race)
+    // or a parent overflow:hidden is clipping it.
+    setLayoutVars();
+    var size = _computeBoardSize();
     chessEl.style.width = size + 'px';
+    void chessEl.offsetWidth;                       // sync layout flush
     if (state.board) {
       state.board.resize();
       syncEvalBarHeight();
@@ -1905,12 +1977,12 @@ function _ensureBoardVisible() {
     if (attempts < MAX_ATTEMPTS) {
       setTimeout(check, INTERVAL_MS);
     }
-    // If we reach MAX_ATTEMPTS, we've tried for 3 seconds — give up gracefully.
-    // The window resize listener will still correct it if the user resizes.
+    // After 5 seconds, stop polling gracefully.
+    // Window resize listener will still correct on any user interaction.
   }
 
-  // Start first check after 150ms (enough time for first paint + CSS grid layout)
-  setTimeout(check, 150);
+  // First check after 200ms — enough time for first paint + CSS grid layout.
+  setTimeout(check, 200);
 }
 
 /* =====================================================
@@ -1975,6 +2047,18 @@ function initBoard() {
   window.addEventListener('load', function() {
     setLayoutVars();
     syncBoardSize();
+  });
+
+  // ── Belt-and-suspenders: staggered re-sync after init ──
+  // Real devices (especially mobile) can have slow/complex rendering
+  // pipelines where the grid doesn't finalise until 500–2000ms after
+  // DOMContentLoaded. These catches cover every known timing scenario.
+  [500, 1000, 2000, 4000].forEach(function(ms) {
+    setTimeout(function() {
+      if (!state.board) return;
+      setLayoutVars();
+      syncBoardSize();
+    }, ms);
   });
 }
 
