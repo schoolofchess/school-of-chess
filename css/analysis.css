@@ -3299,8 +3299,11 @@ body.pgn-page-drag-over::after {
    a scroll container and breaking position:sticky on the topbar.          */
 html { overflow-x: hidden; }
 
-/* Board never leaks outside its card even when JS sets inline width on first paint */
-#chessboard { max-width: 100% !important; }
+/* Board container — overflow:hidden on the CARD clips the board, not on #chessboard
+   itself. max-width:100% on #chessboard caused the board to render at 0px when the
+   grid hadn't laid out yet (parent clientWidth=0 → max-width=0 overrides inline px).
+   The card's overflow:hidden handles visual clipping safely. */
+#chessboard { display: block; }
 .board-card  { overflow: hidden; }
 
 /* ── 1. Large desktop 1400px+ ───────────────────────────────── */

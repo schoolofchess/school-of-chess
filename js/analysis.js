@@ -1685,30 +1685,65 @@ function setLayoutVars() {
 }
 
 /* =====================================================
+   WINDOW-BASED BOARD SIZE — reliable fallback when DOM
+   dimensions aren't ready yet (grid not laid out, fonts
+   still loading, etc). Uses only window dimensions which
+   are always available immediately.
+   ===================================================== */
+function _getWindowBasedBoardSize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  if (w <= 768) {
+    // Mobile stacked layout — board fills available width
+    return Math.max(260, Math.min(w - 28, 520));
+  }
+
+  // Desktop — estimate from window size, accounting for UI chrome
+  const navEl    = document.getElementById('navbar');
+  const topbarEl = document.getElementById('analysisTopbar');
+  const navH     = (navEl    && navEl.offsetHeight    > 0) ? navEl.offsetHeight    : 67;
+  const topbarH  = (topbarEl && topbarEl.offsetHeight > 0) ? topbarEl.offsetHeight : 48;
+
+  // Subtract right panel, eval bar, grid gaps + padding
+  const rightW  = w <= 900 ? 244 : w <= 1200 ? 294 : 320;
+  const evalW   = 24;
+  const gapPad  = 80;  // grid gaps, card padding, scrollbar
+  const statusH = 90;  // status bar + board controls
+
+  const availW = Math.max(0, w - rightW - evalW - gapPad);
+  const availH = Math.max(0, h - navH - topbarH - statusH);
+
+  return Math.max(240, Math.min(availW, availH, 720));
+}
+
+/* =====================================================
    COMPUTE BOARD SIZE — pure calculation, no side effects
    Returns the correct pixel size for the board square.
+   NEVER returns 0 — always provides a valid size.
    ===================================================== */
 function _computeBoardSize() {
   const card = document.querySelector('.board-card');
-  if (!card) return 400; // safe fallback
+  if (!card) return _getWindowBasedBoardSize();
 
   const isMobile = window.innerWidth <= 768;
 
   if (isMobile) {
     // Mobile: board fills card width (stacked layout, page scrolls)
-    const pad     = 14;                            // 7px × 2 mobile padding
-    const availW  = Math.max(0, card.clientWidth - pad);
-    if (availW < 80) return 300;                   // guard: card not measured yet
-    return Math.max(260, Math.min(availW, 520));   // clamp 260–520
+    const pad    = 14;
+    const availW = Math.max(0, card.clientWidth - pad);
+    // If card not measured yet, fall back to window width
+    if (availW < 80) return Math.max(260, Math.min(window.innerWidth - 28, 520));
+    return Math.max(260, Math.min(availW, 520));
   }
 
   // Desktop/tablet: board must fit inside card both horizontally + vertically
-  const pad    = 20;                               // 10px × 2 desktop padding
+  const pad    = 20;
   const availW = Math.max(0, card.clientWidth  - pad);
   const availH = Math.max(0, card.clientHeight - pad);
 
-  // Both dims must be positive — card not yet laid out if either = 0
-  if (availW < 80 || availH < 80) return 0;       // signal: layout not ready
+  // If card not laid out yet, use window-based calculation (never return 0)
+  if (availW < 80 || availH < 80) return _getWindowBasedBoardSize();
 
   return Math.max(240, Math.min(availW, availH, 720));
 }
@@ -1724,8 +1759,8 @@ function syncBoardSize() {
   const chessEl = document.getElementById('chessboard');
   if (!chessEl) return;
 
+  // _computeBoardSize() always returns a valid non-zero size now
   const size = _computeBoardSize();
-  if (size === 0) return;
 
   if (Math.abs(chessEl.offsetWidth - size) > 2) {
     state._syncBoardBusy = true;
@@ -1825,8 +1860,57 @@ function _initChessboard(fen) {
     });
   });
 
-  // ── Step 5: Single safety fallback (250ms covers font-load + sticky settle) ──
+  // ── Step 5: Safety fallback (250ms covers font-load + sticky settle) ──
   setTimeout(function() { setLayoutVars(); syncBoardSize(); }, 250);
+
+  // ── Step 6: Board visibility guard ──
+  // Polls every 120ms for up to 3s. If the board rendered at 0×0 (race
+  // condition between JS init and CSS grid layout), this forces a resize.
+  // Stops as soon as the board is visibly rendered (offsetWidth > 50).
+  _ensureBoardVisible();
+}
+
+/* =====================================================
+   BOARD VISIBILITY GUARD — production reliability fix
+   Handles the case where chessboard.js initialized before
+   the CSS grid laid out, resulting in a 0×0 invisible board.
+   Polls every 120ms (up to 25 attempts = 3 seconds) until
+   the board has a real visible size, then stops.
+   ===================================================== */
+function _ensureBoardVisible() {
+  const MAX_ATTEMPTS = 25;
+  const INTERVAL_MS  = 120;
+  let   attempts     = 0;
+
+  function check() {
+    if (!state.board) return;                       // board was destroyed
+
+    const chessEl = document.getElementById('chessboard');
+    if (!chessEl) return;
+
+    const visibleW = chessEl.offsetWidth;
+    const visibleH = chessEl.offsetHeight;
+
+    if (visibleW > 50 && visibleH > 50) return;    // board is visible — done ✅
+
+    // Board still at 0×0 — force resize with current best size
+    const size = _computeBoardSize();
+    chessEl.style.width = size + 'px';
+    if (state.board) {
+      state.board.resize();
+      syncEvalBarHeight();
+    }
+
+    attempts++;
+    if (attempts < MAX_ATTEMPTS) {
+      setTimeout(check, INTERVAL_MS);
+    }
+    // If we reach MAX_ATTEMPTS, we've tried for 3 seconds — give up gracefully.
+    // The window resize listener will still correct it if the user resizes.
+  }
+
+  // Start first check after 150ms (enough time for first paint + CSS grid layout)
+  setTimeout(check, 150);
 }
 
 /* =====================================================
@@ -1883,6 +1967,14 @@ function initBoard() {
       setLayoutVars();
       syncBoardSize();
     }
+  });
+
+  // ── window.load — all resources (images, fonts) fully loaded ──
+  // Fonts affect navbar height. Images affect layout. This is the final
+  // reliable moment to correct the board size on slow connections.
+  window.addEventListener('load', function() {
+    setLayoutVars();
+    syncBoardSize();
   });
 }
 
