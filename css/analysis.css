@@ -7,8 +7,89 @@
    CSS LAYOUT VARIABLES (set by JS on load + resize)
    ===================================================== */
 :root {
-    --nav-h:    68px;  /* measured by JS — blog.css navbar: 36px logo + 32px (1rem×2) padding */
-    --topbar-h: 56px;  /* measured by JS */
+    --nav-h:    48px;  /* compact fixed navbar on analysis page — JS overrides with live measurement */
+    --topbar-h: 48px;  /* measured by JS — 48px now that topbar-brand is hidden */
+}
+
+/* =====================================================
+   ANALYSIS PAGE NAVBAR — compact fixed header
+   analysis.html uses <header id="navbar"> WITHOUT the
+   .navbar class, so style.css fixed-positioning rules
+   don't apply. We fix that here, scoped to this page.
+   ===================================================== */
+header#navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: #0d1117;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    /* Prevent any padding from style.css inflating height */
+    padding: 0;
+}
+
+/* Compact logo image */
+header#navbar .logo-img {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+/* Compact logo text */
+header#navbar .logo-text {
+    font-size: 0.82rem;
+}
+
+/* Nav container fills full width at 48px */
+header#navbar .nav-inner {
+    height: 100%;
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Compact nav links */
+header#navbar .nav-links a {
+    padding: 0.3rem 0.65rem;
+    font-size: 0.82rem;
+}
+
+header#navbar .btn-nav {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* Hamburger stays usable */
+header#navbar .hamburger {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    header#navbar .hamburger {
+        display: flex;
+    }
+    /* Mobile dropdown — dark theme override (style.css uses white background) */
+    header#navbar .nav-links {
+        background: #111827;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        border-radius: 0 0 12px 12px;
+    }
+    header#navbar .nav-links a {
+        color: rgba(255,255,255,0.8) !important;
+    }
+    header#navbar .nav-links a:hover,
+    header#navbar .nav-links a.active {
+        background: rgba(255,255,255,0.06) !important;
+        color: #fff !important;
+    }
 }
 
 /* =====================================================
@@ -77,8 +158,8 @@ body > img.piece-417db {
 .dragging-13756 { cursor: grabbing !important; }
 
 /* =====================================================
-   PAGE WRAP — sits below the fixed site navbar.
-   blog.css applies: header#navbar { position: fixed; top: 0 }
+   PAGE WRAP — sits below the fixed compact navbar.
+   analysis.css applies: header#navbar { position: fixed; height: 48px }
    padding-top pushes ALL content clear of the navbar.
    The page may scroll (Classic Games is below the board).
    The first viewport shows only the analysis board.
@@ -88,7 +169,7 @@ body > img.piece-417db {
     min-height: 100dvh;
     box-sizing: border-box;
     /* Critical: push content below the fixed navbar */
-    padding-top: var(--nav-h, 68px);
+    padding-top: var(--nav-h, 48px);
 }
 
 /* =====================================================
@@ -97,12 +178,12 @@ body > img.piece-417db {
    ===================================================== */
 .analysis-topbar {
     position: sticky;
-    top: var(--nav-h, 68px);
+    top: var(--nav-h, 48px);
     flex-shrink: 0;
     z-index: 200;
     background: #111827;
     border-bottom: 1px solid rgba(255,255,255,0.07);
-    height: 56px;
+    height: 48px;
     display: flex;
     align-items: center;
     padding: 0 1.25rem;
@@ -120,10 +201,7 @@ body > img.piece-417db {
 }
 
 .topbar-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    flex-shrink: 0;
+    display: none;  /* hidden — navbar already has branding; topbar is functional-only */
 }
 
 .topbar-icon { color: var(--gold, #f59e0b); font-size: 1rem; }
@@ -137,10 +215,7 @@ body > img.piece-417db {
 }
 
 .topbar-sep {
-    width: 1px;
-    height: 22px;
-    background: rgba(255,255,255,0.1);
-    flex-shrink: 0;
+    display: none;  /* separator only made sense between brand+buttons — both now gone/hidden */
 }
 
 .topbar-cta-group {
@@ -222,8 +297,8 @@ kbd {
 .analysis-workspace-outer {
     background: #0d1117;
     /* Fills exactly the viewport below navbar + topbar */
-    height: calc(100vh  - var(--nav-h, 68px) - var(--topbar-h, 56px));
-    height: calc(100dvh - var(--nav-h, 68px) - var(--topbar-h, 56px));
+    height: calc(100vh  - var(--nav-h, 48px) - var(--topbar-h, 48px));
+    height: calc(100dvh - var(--nav-h, 48px) - var(--topbar-h, 48px));
     /* Safety net: JS overrides this if the calc() resolves to < 200px */
     min-height: 300px;
     overflow: hidden;
@@ -1561,8 +1636,8 @@ kbd {
         position: relative;
         top: 0;
         height: auto;
-        min-height: 48px;
-        padding: 0.5rem 0.85rem;
+        min-height: 44px;
+        padding: 0.4rem 0.85rem;
     }
     .analysis-topbar-inner { flex-wrap: wrap; gap: 0.5rem; }
     .topbar-cta-group { gap: 0.35rem; }

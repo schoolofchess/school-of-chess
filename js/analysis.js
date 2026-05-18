@@ -1703,8 +1703,8 @@ function _getWindowBasedBoardSize() {
   // Right-panel and eval-bar widths mirror the CSS grid breakpoints exactly.
   const navEl    = document.getElementById('navbar');
   const topbarEl = document.getElementById('analysisTopbar');
-  const navH     = (navEl    && navEl.offsetHeight    > 0) ? navEl.offsetHeight    : 68;
-  const topbarH  = (topbarEl && topbarEl.offsetHeight > 0) ? topbarEl.offsetHeight : 56;
+  const navH     = (navEl    && navEl.offsetHeight    > 0) ? navEl.offsetHeight    : 48;
+  const topbarH  = (topbarEl && topbarEl.offsetHeight > 0) ? topbarEl.offsetHeight : 48;
 
   // These match the grid-template-columns values at each breakpoint:
   // ≥1400px: 22px eval + 320px right  |  1024–1399: 18px + 276px  |  etc.
@@ -1994,8 +1994,8 @@ function _ensureBoardVisible() {
       setLayoutVars();
       var navEl2    = document.getElementById('navbar');
       var topbarEl2 = document.getElementById('analysisTopbar');
-      var navH2   = (navEl2    && navEl2.offsetHeight    > 0) ? navEl2.offsetHeight    : 68;
-      var topbarH2= (topbarEl2 && topbarEl2.offsetHeight > 0) ? topbarEl2.offsetHeight : 56;
+      var navH2   = (navEl2    && navEl2.offsetHeight    > 0) ? navEl2.offsetHeight    : 48;
+      var topbarH2= (topbarEl2 && topbarEl2.offsetHeight > 0) ? topbarEl2.offsetHeight : 48;
       wo.style.height = Math.max(400, window.innerHeight - navH2 - topbarH2) + 'px';
     }
 
