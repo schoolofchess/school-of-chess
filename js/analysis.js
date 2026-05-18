@@ -1699,28 +1699,42 @@ function _getWindowBasedBoardSize() {
     return Math.max(260, Math.min(w - 28, 520));
   }
 
-  // Desktop — estimate from window size, accounting for UI chrome
+  // Desktop / tablet — estimate from window dimensions.
+  // Right-panel and eval-bar widths mirror the CSS grid breakpoints exactly.
   const navEl    = document.getElementById('navbar');
   const topbarEl = document.getElementById('analysisTopbar');
-  const navH     = (navEl    && navEl.offsetHeight    > 0) ? navEl.offsetHeight    : 67;
-  const topbarH  = (topbarEl && topbarEl.offsetHeight > 0) ? topbarEl.offsetHeight : 48;
+  const navH     = (navEl    && navEl.offsetHeight    > 0) ? navEl.offsetHeight    : 68;
+  const topbarH  = (topbarEl && topbarEl.offsetHeight > 0) ? topbarEl.offsetHeight : 56;
 
-  // Subtract right panel, eval bar, grid gaps + padding
-  const rightW  = w <= 900 ? 244 : w <= 1200 ? 294 : 320;
-  const evalW   = 24;
-  const gapPad  = 80;  // grid gaps, card padding, scrollbar
-  const statusH = 90;  // status bar + board controls
+  // These match the grid-template-columns values at each breakpoint:
+  // ≥1400px: 22px eval + 320px right  |  1024–1399: 18px + 276px  |  etc.
+  const evalW   = w >= 1400 ? 22 : w >= 1024 ? 18 : w >= 900 ? 16 : 14;
+  const rightW  = w >= 1400 ? 320 : w >= 1200 ? 300 : w >= 1024 ? 276 : w >= 900 ? 256 : 230;
 
-  const availW = Math.max(0, w - rightW - evalW - gapPad);
-  const availH = Math.max(0, h - navH - topbarH - statusH);
+  // Grid gap (2×) + workspace padding (2× horizontal) + card padding (2×)
+  const gap     = w >= 1400 ? 32 : w >= 1024 ? 24 : w >= 900 ? 20 : 16;  // 2 gaps
+  const wsPad   = w >= 1400 ? 48 : w >= 1024 ? 28 : 24;  // 2× horizontal workspace padding
+  const cardPad = 20;  // board-card padding (2× sides)
 
-  return Math.max(240, Math.min(availW, availH, 720));
+  // Workspace is centred with max-width:1400px — subtract any centering margin
+  const wsWidth = Math.min(w, 1400);
+  const boardColW = wsWidth - evalW - rightW - gap - wsPad;
+
+  const availW  = Math.max(0, boardColW - cardPad);
+
+  // Vertical: viewport minus navbar, topbar, status bar, controls, padding
+  const chromH  = navH + topbarH + 32 + 52 + 24;  // nav+topbar+status+controls+gaps
+  const wsPadV  = w >= 1400 ? 32 : 24;             // 2× vertical workspace padding
+  const availH  = Math.max(0, h - chromH - wsPadV - cardPad);
+
+  const size = Math.min(availW, availH, 720);
+  return Math.max(240, isFinite(size) && size > 0 ? size : 400);
 }
 
 /* =====================================================
    COMPUTE BOARD SIZE — pure calculation, no side effects
    Returns the correct pixel size for the board square.
-   NEVER returns 0 — always provides a valid size.
+   NEVER returns 0, NaN, or Infinity.
    ===================================================== */
 function _computeBoardSize() {
   const card = document.querySelector('.board-card');
@@ -1729,28 +1743,51 @@ function _computeBoardSize() {
   const isMobile = window.innerWidth <= 768;
 
   if (isMobile) {
-    // Mobile: board fills card width (stacked layout, page scrolls)
+    // Mobile: stacked layout, board fills card width
     const pad    = 14;
-    const availW = Math.max(0, card.clientWidth - pad);
-    // If card not measured yet, fall back to window width
+    const raw    = card.clientWidth - pad;
+    const availW = isFinite(raw) && raw > 0 ? raw : 0;
     if (availW < 80) return Math.max(260, Math.min(window.innerWidth - 28, 520));
     return Math.max(260, Math.min(availW, 520));
   }
 
-  // Desktop/tablet: board must fit inside card both horizontally + vertically
+  // Desktop / tablet: board must fit inside card both W and H.
+  // Guard against impossible values that can appear during layout transitions:
+  // - clientWidth/Height = 0 (card not yet laid out)
+  // - clientHeight > window.innerHeight (stale measurement from previous layout)
   const pad    = 20;
-  const availW = Math.max(0, card.clientWidth  - pad);
-  const availH = Math.max(0, card.clientHeight - pad);
+  const rawW   = card.clientWidth;
+  const rawH   = card.clientHeight;
 
-  // If card not laid out yet, use window-based calculation (never return 0)
+  // Sanity-clamp height: card can never legitimately exceed the viewport
+  const maxCardH = window.innerHeight;
+  const safeH    = (isFinite(rawH) && rawH > 0 && rawH <= maxCardH) ? rawH : 0;
+  const safeW    = (isFinite(rawW) && rawW > 0)                      ? rawW : 0;
+
+  const availW = Math.max(0, safeW - pad);
+  const availH = Math.max(0, safeH - pad);
+
+  // If card not laid out yet (either dimension < 80), use window-based fallback
   if (availW < 80 || availH < 80) return _getWindowBasedBoardSize();
 
-  return Math.max(240, Math.min(availW, availH, 720));
+  const size = Math.min(availW, availH, 720);
+
+  // Final guard: result must be a finite positive number ≥ 240
+  if (!isFinite(size) || size <= 0) return _getWindowBasedBoardSize();
+
+  return Math.max(240, size);
 }
 
 /* =====================================================
    BOARD SIZE SYNC — applies computed size to board
    Safe to call any time; guards against bad layout state.
+
+   CRITICAL: state._syncBoardBusy MUST be cleared in a
+   finally block. If board.resize() ever throws (e.g., on
+   a specific viewport size or board state), the flag would
+   stay true forever — every subsequent call would silently
+   bail, leaving the board frozen at the wrong size
+   permanently. The try/finally below prevents this.
    ===================================================== */
 function syncBoardSize() {
   if (!state.board) return;
@@ -1759,14 +1796,25 @@ function syncBoardSize() {
   const chessEl = document.getElementById('chessboard');
   if (!chessEl) return;
 
-  // _computeBoardSize() always returns a valid non-zero size now
   const size = _computeBoardSize();
 
-  if (Math.abs(chessEl.offsetWidth - size) > 2) {
+  // 1px threshold (was 2px) — applies resize whenever size has meaningfully
+  // changed. Catches floating-point drift and subpixel mismatches.
+  if (Math.abs(chessEl.offsetWidth - size) > 1) {
     state._syncBoardBusy = true;
-    chessEl.style.width = size + 'px';
-    state.board.resize();
-    state._syncBoardBusy = false;
+    try {
+      chessEl.style.width = size + 'px';
+      // Force synchronous layout flush so chessboard.js reads the correct
+      // width when board.resize() calls $(...).width() internally.
+      void chessEl.offsetWidth;
+      state.board.resize();
+    } catch (e) {
+      // board.resize() failed — log but never let it corrupt _syncBoardBusy
+      if (typeof console !== 'undefined') console.warn('[Chess] board.resize() error:', e);
+    } finally {
+      // ALWAYS clear the flag, even if resize threw.
+      state._syncBoardBusy = false;
+    }
   }
 
   syncEvalBarHeight();
@@ -1956,8 +2004,10 @@ function _ensureBoardVisible() {
     // returning 0×0 if the board is clipped to invisible by any parent.
     var vis = _getVisibleRect(chessEl);
     if (vis.width > 100 && vis.height > 100) {
-      // Board IS visible and has area — sync eval bar and exit.
-      syncEvalBarHeight();
+      // Board IS visible — ensure it's also the right size (not just
+      // any non-zero size from CSS default). syncBoardSize() will
+      // resize from e.g. 400px (CSS fallback) to the computed 640px.
+      syncBoardSize();
       return;                                       // ✅ done
     }
 

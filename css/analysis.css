@@ -373,14 +373,15 @@ kbd {
 }
 
 /* Board card — centers the board in available space.
-   min-height: 300px ensures the card never collapses to 0 during the
+   min-height + min-width ensure the card never collapses to 0 during the
    first paint pass (before JS ResizeObserver fires), giving the board
    a valid container to measure against on initialization. */
 .board-card {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 300px;         /* prevents collapse during first paint */
+    min-height: 260px;          /* never collapse — board needs visible container */
+    min-width:  260px;          /* same on the horizontal axis */
     overflow: hidden;
     background: #1a2332;
     border-radius: 14px;
@@ -1532,8 +1533,9 @@ kbd {
     }
 
     .board-card {
-        min-height: 300px;
-        aspect-ratio: 1;
+        width: 100%;                /* fill the board-col column */
+        min-height: 0;              /* let aspect-ratio drive the height */
+        aspect-ratio: 1 / 1;       /* always square */
     }
 
     /* Right panel — remove grid constraint, natural flow */
@@ -1551,8 +1553,17 @@ kbd {
         max-height: 200px;
     }
 
-    /* Topbar compact for mobile */
-    .analysis-topbar { height: auto; min-height: 48px; padding: 0.5rem 0.85rem; }
+    /* Topbar — NOT sticky on mobile.
+       position:sticky causes the topbar to remain at the viewport top while
+       the workspace scrolls underneath it, hiding the chess board's top pieces.
+       On mobile the whole layout scrolls as one page — sticky is unnecessary. */
+    .analysis-topbar {
+        position: relative;
+        top: 0;
+        height: auto;
+        min-height: 48px;
+        padding: 0.5rem 0.85rem;
+    }
     .analysis-topbar-inner { flex-wrap: wrap; gap: 0.5rem; }
     .topbar-cta-group { gap: 0.35rem; }
     .topbar-btn { font-size: 0.72rem; padding: 0.3rem 0.55rem; }
@@ -3311,6 +3322,9 @@ html { overflow-x: hidden; }
    The card's overflow:hidden handles visual clipping safely. */
 #chessboard { display: block; }
 .board-card  { overflow: hidden; }
+
+/* board-col must always have meaningful width — prevents 0-width 1fr collapse */
+.board-col { min-width: 260px; }
 
 /* ── 1. Large desktop 1400px+ ───────────────────────────────── */
 @media (min-width: 1400px) {
