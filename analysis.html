@@ -44,7 +44,7 @@
 
     <!-- Site Stylesheets (blog.css NOT loaded here — not needed on analysis page) -->
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/analysis.css?v=20">
+    <link rel="stylesheet" href="css/analysis.css?v=23">
 </head>
 <body>
 
@@ -315,11 +315,24 @@
                         </div>
                     </div>
 
-                    <!-- Move comparison card (shown after every user move) -->
-                    <div class="tp-comparison" id="tpComparison" style="display:none">
+                    <!-- Phase status row — ALWAYS visible, content updates per phase -->
+                    <div class="tp-status-row tp-status-waiting" id="tpStatusRow">
+                        <div class="tp-status-icon" id="tpStatusIcon">
+                            <i class="fas fa-chess-knight"></i>
+                        </div>
+                        <div class="tp-status-content">
+                            <span class="tp-status-title" id="tpStatusTitle">Your turn</span>
+                            <span class="tp-status-sub" id="tpStatusSub">Drag a piece to guess the next move</span>
+                        </div>
+                        <!-- Retry dots shown only in retry phase -->
+                        <div class="tp-retry-dots tp-status-dots" id="tpRetryDots" style="display:none"></div>
+                    </div>
+
+                    <!-- Move comparison card — ALWAYS visible, values update in-place -->
+                    <div class="tp-comparison" id="tpComparison">
                         <div class="tp-quality-banner" id="tpQualityBanner">
                             <i class="tp-quality-icon" id="tpQualityIcon"></i>
-                            <span id="tpQualityLabel">Excellent!</span>
+                            <span id="tpQualityLabel">Waiting for move…</span>
                         </div>
                         <div class="tp-moves-grid">
                             <div class="tp-move-row tp-user-row">
@@ -340,43 +353,24 @@
                         </div>
                         <div class="tp-cpl-row">
                             <span class="tp-cpl-label">Centipawn loss</span>
-                            <span class="tp-cpl-val" id="tpCplVal">0</span>
+                            <span class="tp-cpl-val" id="tpCplVal">—</span>
                             <span class="tp-pts-change" id="tpPtsChange"></span>
                         </div>
                         <p class="tp-feedback-text" id="tpFeedbackText"></p>
                     </div>
 
-                    <!-- Waiting for user move -->
-                    <div class="tp-waiting" id="tpWaiting">
-                        <div class="tp-waiting-icon">
-                            <i class="fas fa-chess-knight"></i>
-                        </div>
-                        <p class="tp-waiting-title">Guess the next move!</p>
-                        <p class="tp-waiting-sub" id="tpWaitingSub">Drag your piece on the board</p>
-                    </div>
-
-                    <!-- Evaluating state -->
-                    <div class="tp-evaluating" id="tpEvaluating" style="display:none">
-                        <div class="tp-eval-spinner"></div>
-                        <span>Engine evaluating…</span>
-                    </div>
-
-                    <!-- Auto-playing opponent -->
-                    <div class="tp-auto-play" id="tpAutoPlay" style="display:none">
-                        <i class="fas fa-robot"></i>
-                        <span id="tpAutoPlayText">Opponent plays…</span>
-                    </div>
-
-                    <!-- Retry prompt (shown when player makes mistake/blunder) -->
-                    <div class="tp-retry-prompt" id="tpRetryPrompt" style="display:none">
-                        <div class="tp-retry-icon"><i class="fas fa-lightbulb"></i></div>
-                        <p class="tp-retry-title" id="tpRetryTitle">There's a stronger move!</p>
-                        <p class="tp-retry-sub"   id="tpRetrySub">Think deeper — you have 2 more tries.</p>
-                        <div class="tp-retry-dots" id="tpRetryDots"></div>
-                    </div>
-                    <!-- Shared hint area (used in both waiting and retry phases) -->
+                    <!-- Shared hint area -->
                     <div class="tp-hint-reveal" id="tpHintReveal" style="display:none">
                         <div class="tp-hint-text" id="tpHintText"></div>
+                    </div>
+
+                    <!-- ── Hidden dummies — keep IDs so legacy JS refs don't error ── -->
+                    <div id="tpWaiting"     style="display:none"><p id="tpWaitingSub"></p></div>
+                    <div id="tpEvaluating"  style="display:none"></div>
+                    <div id="tpAutoPlay"    style="display:none"><span id="tpAutoPlayText"></span></div>
+                    <div id="tpRetryPrompt" style="display:none">
+                        <p id="tpRetryTitle"></p>
+                        <p id="tpRetrySub"></p>
                     </div>
 
                     <!-- Action buttons -->
@@ -425,9 +419,9 @@
                     <div class="tp-speed-row">
                         <span class="tp-speed-label"><i class="fas fa-tachometer-alt"></i> Speed</span>
                         <div class="tp-speed-btns">
-                            <button class="tp-speed-btn" data-speed="fast"   title="Fast — 0.8s">⚡ Fast</button>
-                            <button class="tp-speed-btn" data-speed="normal" title="Normal — 1.8s">▶ Normal</button>
-                            <button class="tp-speed-btn" data-speed="slow"   title="Slow — 3s">🐢 Slow</button>
+                            <button class="tp-speed-btn" data-speed="fast"   title="Fast — 0.5s feedback, 1.2s reveal">⚡ Fast</button>
+                            <button class="tp-speed-btn" data-speed="normal" title="Normal — 1.5s feedback, 2.2s reveal">▶ Normal</button>
+                            <button class="tp-speed-btn" data-speed="slow"   title="Slow — 3.5s feedback, 4.5s reveal">🐢 Slow</button>
                         </div>
                     </div>
 
@@ -788,7 +782,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <!-- Site scripts -->
 <script src="js/main.js"></script>
-<script src="js/analysis.js?v=20"></script>
+<script src="js/analysis.js?v=23"></script>
+<!-- Training test suite — run: await TSTest.runAll() in DevTools console -->
+<script src="js/ts-training-test.js"></script>
 
 </body>
 </html>

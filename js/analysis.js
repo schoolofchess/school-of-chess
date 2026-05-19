@@ -1932,6 +1932,10 @@ function _initChessboard(fen) {
   // condition between JS init and CSS grid layout), this forces a resize.
   // Stops as soon as the board is visibly rendered (offsetWidth > 50).
   _ensureBoardVisible();
+
+  // ── Step 7: Click-to-move (v23) ──
+  // Bind once — CM._bound guard makes repeated calls from board re-inits safe.
+  initClickToMove();
 }
 
 /* =====================================================
@@ -2075,11 +2079,15 @@ function initBoard() {
   }, { passive: true });
 
   // ── Orientation change (mobile rotation) ──
+  var _orientTimer;
   window.addEventListener('orientationchange', function() {
-    // Wait for the browser to finish rotating before measuring
-    setTimeout(function() {
+    // Debounced — rapid orientation events (e.g. partial rotations) are coalesced.
+    // 350ms gives the browser time to re-layout after the rotation completes.
+    clearTimeout(_orientTimer);
+    _orientTimer = setTimeout(function() {
+      cmClearSelection();  // v23: discard any click-to-move state after orientation flip
       setLayoutVars();
-      syncBoardSize();
+      if (state.board) syncBoardSize();
     }, 350);
   });
 
@@ -2447,12 +2455,41 @@ function bindKeyboard() {
    ===================================================== */
 
 /* ---- Replay speed configuration ---- */
-const TS_SPEEDS = { fast: 800, normal: 1800, slow: 3000 };
+/* =====================================================
+   SPEED CONFIGURATION — v22 overhaul
+   ─────────────────────────────────────────────────
+   Each property controls a distinct timing moment:
+     feedback  — pause after a GOOD move before auto-continuing
+     reveal    — pause after showing answer (reveal/retry-exhaust)
+                 MUST be long enough to read the comparison card
+     oppPre    — pause before opponent piece starts animating
+     oppPost   — pause after opponent animation before next user turn
+     gamePre   — pause before the PGN game move animates (alt-move path)
+     gamePost  — pause after game move animation before next user turn
+
+   FAST  : aggressive — advanced users who already know the game
+   NORMAL: balanced   — default training mode
+   SLOW  : generous   — beginners who need time to read feedback
+   ===================================================== */
+const TS_SPEEDS = {
+  //                  feedback  reveal  oppPre  oppPost  gamePre  gamePost
+  fast:   { feedback:  500, reveal: 1200, oppPre:  100, oppPost:  380, gamePre:  100, gamePost:  380 },
+  normal: { feedback: 1500, reveal: 2200, oppPre:  250, oppPost:  600, gamePre:  300, gamePost:  600 },
+  slow:   { feedback: 3500, reveal: 4500, oppPre:  600, oppPost: 1200, gamePre:  600, gamePost: 1200 },
+  // slow.oppPost  1200/380 = 3.16×  ✓  (was 1100 → 2.9×, failed ≥3× ratio test)
+  // slow.gamePost 1200/380 = 3.16×  ✓  (was 1000 → 2.6×, failed ≥3× ratio test)
+};
 const TS_SPEED_KEY = 'ts_replay_speed'; // localStorage key
 
-function _tsGetDelay() {
-  const saved = localStorage.getItem(TS_SPEED_KEY) || 'normal';
-  return TS_SPEEDS[saved] || TS_SPEEDS.normal;
+/**
+ * _tsGetDelay(type)
+ * Returns the millisecond delay for a given timing type and current speed.
+ * @param {string} type — 'feedback' | 'reveal' | 'oppPre' | 'oppPost' | 'gamePre' | 'gamePost'
+ */
+function _tsGetDelay(type) {
+  const speed = localStorage.getItem(TS_SPEED_KEY) || 'normal';
+  const cfg   = TS_SPEEDS[speed] || TS_SPEEDS.normal;
+  return cfg[type !== undefined ? type : 'feedback'] || cfg.feedback;
 }
 
 function _tsSetSpeed(speedName) {
@@ -2510,7 +2547,177 @@ const TS = {
   // Hint system
   hintLevel:      0,          // 0=none, 1=piece type, 2=from-square, 3=full move revealed
   hintPenalty:    0,          // penalty points for current move's hints
+
+  // Retry system — defined at object level so tests can read without starting a session
+  maxRetries:     2,          // bad-move attempts allowed before answer is revealed
+  retryCount:     0,          // attempts made on current user turn
+  retryPenalty:   0,          // score penalty from retries on current move
+  _lastCpLoss:    0,          // saved cpLoss for "Show Answer" path
+  _lastCls:       null,       // saved classification object for retry/reveal path
 };
+
+/* =====================================================
+   v23 — CLICK-TO-MOVE STATE
+   ===================================================== */
+const CM = {
+  selectedSquare: null,   // currently selected square, e.g. 'e2'
+  legalTargets:   [],     // array of destination squares from selection
+  _ptrMoved:      false,  // true once pointer moved >8px → was a drag, not a click
+  _ptrStartX:     0,
+  _ptrStartY:     0,
+  DRAG_THRESHOLD: 8,      // px — below this delta it's a click; above it's a drag
+  _bound:         false,  // guard — only bind events once even if board re-inits
+};
+
+/* Clear all click-to-move highlights and deselect the current piece.
+   Called from _tsShowPhase (phase change) and _tsHandleRetry (board revert). */
+function cmClearSelection() {
+  // Remove highlight classes from all squares
+  document.querySelectorAll('.square-55d63.sq-selected').forEach(function(el) {
+    el.classList.remove('sq-selected');
+  });
+  document.querySelectorAll('.square-55d63.sq-legal-move').forEach(function(el) {
+    el.classList.remove('sq-legal-move');
+  });
+  document.querySelectorAll('.square-55d63.sq-legal-capture').forEach(function(el) {
+    el.classList.remove('sq-legal-capture');
+  });
+  CM.selectedSquare = null;
+  CM.legalTargets   = [];
+}
+
+/* Bind pointer + click events to the #chessboard container (event delegation).
+   Safe to call multiple times — CM._bound guard prevents double-binding. */
+function initClickToMove() {
+  const boardEl = document.getElementById('chessboard');
+  if (!boardEl || CM._bound) return;
+  CM._bound = true;
+
+  // Track pointer start so we can distinguish click from drag (8px threshold)
+  boardEl.addEventListener('pointerdown', function(e) {
+    CM._ptrMoved  = false;
+    CM._ptrStartX = e.clientX;
+    CM._ptrStartY = e.clientY;
+  }, { passive: true });
+
+  boardEl.addEventListener('pointermove', function(e) {
+    if (CM._ptrMoved) return;
+    var dx = e.clientX - CM._ptrStartX;
+    var dy = e.clientY - CM._ptrStartY;
+    if (Math.abs(dx) > CM.DRAG_THRESHOLD || Math.abs(dy) > CM.DRAG_THRESHOLD) {
+      CM._ptrMoved = true;
+      cmClearSelection(); // started dragging → clear any click-selection visuals
+    }
+  }, { passive: true });
+
+  // Main click handler (fires AFTER pointerdown+up without significant movement)
+  boardEl.addEventListener('click', function(e) {
+    if (CM._ptrMoved) return; // was a drag, ignore click event
+
+    // Find the square element from the click target (may be a child img/etc.)
+    var sqEl = e.target.closest ? e.target.closest('.square-55d63') : null;
+    if (!sqEl) return;
+    var sq = sqEl.getAttribute('data-square');
+    if (!sq) return;
+
+    if (CM.selectedSquare === null) {
+      _cmHandleFirstClick(sq);
+    } else {
+      _cmHandleSecondClick(sq);
+    }
+  });
+
+  // Escape key deselects
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') cmClearSelection();
+  });
+}
+
+/* First click — select a piece and show legal destination highlights. */
+function _cmHandleFirstClick(sq) {
+  if (!state.game) return;
+  var piece = state.game.get(sq);
+  if (!piece) return; // empty square
+
+  // Determine the current player's colour
+  var turn = state.game.turn(); // 'w' or 'b'
+
+  if (TS.active) {
+    // Training mode: only allow clicks during waiting / retry phase, and only own pieces
+    if (TS.phase !== 'waiting' && TS.phase !== 'retry') return;
+    if (piece.color !== TS.side) return;
+  } else {
+    // Normal / free-play mode: only the side to move
+    if (piece.color !== turn) return;
+  }
+
+  // Compute legal moves from this square
+  var moves = state.game.moves({ square: sq, verbose: true });
+  if (!moves || moves.length === 0) return; // piece has no legal moves
+
+  cmClearSelection(); // clear any previous selection first
+
+  CM.selectedSquare = sq;
+  CM.legalTargets   = moves.map(function(m) { return m.to; });
+
+  // Highlight selected square
+  var fromEl = document.querySelector('.square-55d63[data-square="' + sq + '"]');
+  if (fromEl) fromEl.classList.add('sq-selected');
+
+  // Highlight every legal destination
+  moves.forEach(function(m) {
+    var destEl = document.querySelector('.square-55d63[data-square="' + m.to + '"]');
+    if (!destEl) return;
+    // Capture: there's an enemy piece on the target square
+    var target = state.game.get(m.to);
+    var isCapture = (target && target.color !== piece.color) ||
+                    (m.flags && m.flags.indexOf('e') !== -1); // en passant flag
+    destEl.classList.add(isCapture ? 'sq-legal-capture' : 'sq-legal-move');
+  });
+}
+
+/* Second click — execute the move, reselect, or deselect. */
+function _cmHandleSecondClick(sq) {
+  var from = CM.selectedSquare;
+
+  // Clicked the same square → deselect
+  if (sq === from) {
+    cmClearSelection();
+    return;
+  }
+
+  // Check if clicking another own-colour piece (not a capture target)
+  var piece = state.game.get(sq);
+  var turn  = state.game.turn();
+  var myColor = TS.active ? TS.side : turn;
+
+  if (piece && piece.color === myColor && CM.legalTargets.indexOf(sq) === -1) {
+    // Own piece that isn't a legal capture target → reselect that piece instead
+    cmClearSelection();
+    _cmHandleFirstClick(sq);
+    return;
+  }
+
+  // If not a legal target, deselect
+  if (CM.legalTargets.indexOf(sq) === -1) {
+    cmClearSelection();
+    return;
+  }
+
+  // Clear highlights BEFORE calling onDrop so they don't linger
+  cmClearSelection();
+
+  // Delegate to the existing drop handler (handles training + normal + guess-the-move)
+  var result = onDrop(from, sq);
+
+  // If the move was rejected (result === 'snapback'), nothing to do — board unchanged
+  // If accepted, onDrop already called state.board.position() internally via updateAll()
+  // or _tsOnDrop(), so the visual is correct.
+  // Call onSnapEnd as a safety sync (matches the chessboard.js drag-drop flow)
+  if (result !== 'snapback') {
+    onSnapEnd();
+  }
+}
 
 /* =====================================================
    SETUP MODAL
@@ -2701,11 +2908,18 @@ function _tsAutoPlayOpponent() {
   _tsShowPhase('auto_play');
   const autoText = document.getElementById('tpAutoPlayText');
   if (autoText) autoText.textContent = `${oppColor} plays ${oppSAN}`;
+  // v21: also update the persistent status row sub-text
+  const _ap1Sub = document.getElementById('tpStatusSub');
+  if (_ap1Sub) _ap1Sub.textContent = `${oppColor} plays ${oppSAN}`;
+  const _ap1Titl = document.getElementById('tpStatusTitle');
+  if (_ap1Titl) _ap1Titl.textContent = `${oppColor} to move`;
 
   // Capture destination for flash (before move is applied)
   const destSquare = oppMove.to;
 
-  // ── Step 2 (250 ms): apply to chess.js + animate board ──
+  // ── Step 2: apply to chess.js + animate board (delay scales with speed) ──
+  const OPP_PRE  = _tsGetDelay('oppPre');   // fast=100ms  normal=250ms  slow=600ms
+  const OPP_POST = _tsGetDelay('oppPost');  // fast=380ms  normal=600ms  slow=1100ms
   setTimeout(() => {
     state.game.move(oppMove);
     state.currentMoveIdx++;
@@ -2716,13 +2930,13 @@ function _tsAutoPlayOpponent() {
     updateBoardStatus();
     renderMoveList();
 
-    // ── Step 3 (350 ms after board update): flash destination square ──
+    // ── Step 3: flash destination square 100ms after animation starts ──
     setTimeout(() => _tsFlashOpponentSquare(destSquare), 100);
 
-    // ── Step 4 (600 ms after board update): proceed to next move ──
-    setTimeout(_tsNextMove, 600);
+    // ── Step 4: proceed to next move (post-delay scales with speed) ──
+    setTimeout(_tsNextMove, OPP_POST);
 
-  }, 250);
+  }, OPP_PRE);
 }
 
 /* Flash the opponent's landing square with a short indigo glow.
@@ -3024,7 +3238,7 @@ function _tsCompleteEvaluation() {
    The Continue button shows a progress bar counting down.
    ===================================================== */
 function _tsStartAutoContTimer() {
-  const DELAY = _tsGetDelay(); // ms — reads user's saved speed preference
+  const DELAY = _tsGetDelay('feedback'); // pause to read result, then auto-continue
 
   // Clear any previous timer (safety)
   if (TS._autoContTimer) {
@@ -3054,7 +3268,7 @@ function _tsStartAutoContTimer() {
    and animate the actual PGN game move so training stays on the historical line.
    ===================================================== */
 function _tsStartAltMoveTimer() {
-  const DELAY = _tsGetDelay(); // respects user speed preference — no forced 2.5s minimum
+  const DELAY = _tsGetDelay('feedback'); // same pause as good move before reverting+continuing
 
   if (TS._autoContTimer) { clearTimeout(TS._autoContTimer); TS._autoContTimer = null; }
 
@@ -3086,8 +3300,10 @@ function _tsStartAltMoveTimer() {
    Shows a countdown on the Continue button; player can click to skip.
    ===================================================== */
 function _tsStartRevealPlayTimer(needUndo) {
-  // At least 2.5 s so the player can actually read the comparison card
-  const DELAY = Math.max(_tsGetDelay(), 2500);
+  // Use 'reveal' delay — always longer than 'feedback' so the player can read
+  // the comparison card. Fast=1200ms, Normal=2200ms, Slow=4500ms.
+  // NO Math.max clamp — the reveal values are already set generously per speed.
+  const DELAY = _tsGetDelay('reveal');
 
   if (TS._autoContTimer) { clearTimeout(TS._autoContTimer); TS._autoContTimer = null; }
   TS._pendingRevealPlay = { needUndo: needUndo };
@@ -3135,26 +3351,31 @@ function _tsPlayGameMoveAndContinue(needUndo) {
   }
 
   const gm = TS.gameMoveObj;
-  if (!gm) { setTimeout(_tsNextMove, 300); return; }
+  if (!gm) { setTimeout(_tsNextMove, _tsGetDelay('oppPost')); return; }
 
   // Show "Game: f4" in the auto-play indicator
   _tsShowPhase('auto_play');
   const autoText = document.getElementById('tpAutoPlayText');
   if (autoText) autoText.textContent = `Game: ${TS.gameMoveSAN}`;
+  // v21: persistent status row
+  const _ap2Sub = document.getElementById('tpStatusSub');
+  if (_ap2Sub) _ap2Sub.textContent = `Playing the game move: ${TS.gameMoveSAN}`;
 
   const destSquare = gm.to;
-  // Brief pause (300 ms) so the player can see the board is back to the
-  // pre-move position before the game move slides in.
+  const GAME_PRE  = _tsGetDelay('gamePre');   // fast=100ms  normal=300ms  slow=600ms
+  const GAME_POST = _tsGetDelay('gamePost');  // fast=380ms  normal=600ms  slow=1000ms
+
+  // Pause so the board visually settles at the pre-move position, then animate the game move.
   setTimeout(function () {
     state.game.move(gm);
     state.currentMoveIdx++;
-    state.board.position(state.game.fen(), true); // smooth animated slide
+    state.board.position(state.game.fen(), true); // smooth animated slide (~300ms)
     updateSideIndicator();
     updateBoardStatus();
     renderMoveList();
     setTimeout(function () { _tsFlashOpponentSquare(destSquare); }, 100);
-    setTimeout(_tsNextMove, 600);
-  }, 300);
+    setTimeout(_tsNextMove, GAME_POST);
+  }, GAME_PRE);
 }
 
 /* =====================================================
@@ -3171,6 +3392,7 @@ function _tsHandleRetry(cpLoss, cls) {
   TS._lastCls    = cls;
 
   // ── Undo the bad move immediately — piece snaps back to origin square ──
+  cmClearSelection(); // clear any click-to-move highlights before reverting board
   state.game.undo();
   state.currentMoveIdx--;
   // Use the pre-move snapshot for a clean, reliable revert
@@ -3198,53 +3420,66 @@ function _tsHandleRetry(cpLoss, cls) {
 /* =====================================================
    SHOW RETRY PROMPT — encouraging message, no answer revealed
    ===================================================== */
+/* =====================================================
+   v21 — PERSISTENT PANEL: _tsShowRetryPrompt
+   Updates the status row with retry feedback.
+   The comparison card stays visible (shows last move data
+   or dashes). Old panel IDs in dummy divs for compat.
+   ===================================================== */
 function _tsShowRetryPrompt() {
-  // Hide all other panels, show retry panel
-  ['tpComparison','tpWaiting','tpEvaluating','tpAutoPlay'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-  const retryDiv = document.getElementById('tpRetryPrompt');
-  const actions  = document.getElementById('tpActions');
-  if (retryDiv) retryDiv.style.display = '';
-  if (actions)  actions.style.display  = '';
+  // Comparison card must stay visible (never hide it)
+  const comp = document.getElementById('tpComparison');
+  if (comp) comp.classList.remove('tp-comp-dim');
 
-  // ── ChessBase-style progressive retry messages ──
-  const title     = document.getElementById('tpRetryTitle');
-  const sub       = document.getElementById('tpRetrySub');
-  const dots      = document.getElementById('tpRetryDots');
+  // Actions visible so player can hit Hint / Show Answer
+  const actions = document.getElementById('tpActions');
+  if (actions) actions.style.display = '';
+
+  // Build messaging
   const triesLeft = TS.maxRetries - TS.retryCount;
   const isBlunder = TS._lastCls && TS._lastCls.quality === 'blunder';
   const cpLoss    = TS._lastCpLoss || 0;
 
-  // First attempt (retryCount === 1): encouraging, no spoilers
-  // Second attempt (retryCount === 2): stronger hint language, source square already highlighted
   const msgs = {
     1: {
       title: 'There is a stronger move here!',
       sub: isBlunder
-        ? `That move seriously weakens the position (${cpLoss}cp lost). Look harder — find the best continuation!`
-        : `The engine found a significantly better move (${cpLoss}cp difference). Think about your piece activity and your opponent's threats.`,
+        ? `That move seriously weakens the position (${cpLoss}cp lost). Look harder!`
+        : `The engine found a better move (${cpLoss}cp difference). Think about piece activity and threats.`,
     },
     2: {
       title: 'Look carefully — one more chance!',
       sub: isBlunder
-        ? `Still not the right idea. The highlighted piece is the key — where should it go?`
-        : `The piece to move is highlighted on the board. Which square gives it maximum impact?`,
+        ? `Still not right. The highlighted piece is key — where should it go?`
+        : `The piece to move is highlighted. Which square gives it maximum impact?`,
     },
   };
-
   const m = msgs[Math.min(TS.retryCount, 2)];
-  if (title) title.textContent = m.title;
-  if (sub) {
-    sub.textContent = triesLeft > 0
-      ? m.sub + ` (${triesLeft} attempt${triesLeft === 1 ? '' : 's'} remaining)`
-      : m.sub;
-  }
+  const subText = triesLeft > 0
+    ? m.sub + ` (${triesLeft} attempt${triesLeft === 1 ? '' : 's'} left)`
+    : m.sub;
 
-  // Attempt indicator dots
+  // Update status row (replaces old tpRetryPrompt panel)
+  const statusRow  = document.getElementById('tpStatusRow');
+  const statusIcon = document.getElementById('tpStatusIcon');
+  const statusTitl = document.getElementById('tpStatusTitle');
+  const statusSub  = document.getElementById('tpStatusSub');
+  if (statusRow)  statusRow.className = 'tp-status-row tp-status-retry';
+  if (statusIcon) statusIcon.innerHTML = '<i class="fas fa-lightbulb"></i>';
+  if (statusTitl) statusTitl.textContent = m.title;
+  if (statusSub)  statusSub.textContent  = subText;
+
+  // Also update legacy dummy IDs
+  const oldTitle = document.getElementById('tpRetryTitle');
+  const oldSub   = document.getElementById('tpRetrySub');
+  if (oldTitle) oldTitle.textContent = m.title;
+  if (oldSub)   oldSub.textContent   = subText;
+
+  // Attempt indicator dots (inside the status row now)
+  const dots = document.getElementById('tpRetryDots');
   if (dots) {
     dots.innerHTML = '';
+    dots.style.display = '';
     for (let i = 0; i < TS.maxRetries; i++) {
       const dot = document.createElement('span');
       dot.className = 'tp-retry-dot' + (i < TS.retryCount ? ' tp-retry-dot-used' : '');
@@ -3259,15 +3494,15 @@ function _tsShowRetryPrompt() {
   const contBtn = document.getElementById('btnTpContinue');
 
   if (hintBtn) {
-    hintBtn.style.display  = '';
-    hintBtn.disabled       = TS.hintLevel >= 3;
-    hintBtn.style.opacity  = TS.hintLevel >= 3 ? '0.4' : '';
+    hintBtn.style.display = '';
+    hintBtn.disabled      = TS.hintLevel >= 3;
+    hintBtn.style.opacity = TS.hintLevel >= 3 ? '0.4' : '';
   }
   if (revBtn) {
-    revBtn.style.display   = '';
-    revBtn.disabled        = false;
-    revBtn.style.opacity   = '';
-    revBtn.innerHTML       = '<i class="fas fa-eye"></i> Show Answer';
+    revBtn.style.display  = '';
+    revBtn.disabled       = false;
+    revBtn.style.opacity  = '';
+    revBtn.innerHTML      = '<i class="fas fa-eye"></i> Show Answer';
   }
   if (retBtn)  retBtn.style.display  = 'none';
   if (contBtn) contBtn.style.display = 'none';
@@ -3548,7 +3783,8 @@ function _tsContinue() {
     updateAll();
     _tsClearSquareHints();
 
-    setTimeout(_tsNextMove, 600);
+    // Wait for animation to complete before next move (speed-aware)
+    setTimeout(_tsNextMove, _tsGetDelay('gamePost'));
     return;
   }
 
@@ -3556,10 +3792,9 @@ function _tsContinue() {
   TS.phase = 'auto_play'; // suppress further interaction
   _tsClearSquareHints();
 
-  // Hide comparison, show waiting
+  // Brief pause before next user turn starts (speed-aware)
   _tsShowPhase('waiting_pre');
-
-  setTimeout(_tsNextMove, 300);
+  setTimeout(_tsNextMove, _tsGetDelay('gamePre'));
 }
 
 /* =====================================================
@@ -3598,6 +3833,7 @@ function _tsEnd() {
   }
 
   _tsClearSquareHints();
+  cmClearSelection();  // v23: clear any pending click-to-move highlights
   updateAll();
   showToast('Training session ended.', '');
 }
@@ -3719,48 +3955,121 @@ function _tsGrade(accuracy) {
 /* =====================================================
    UI HELPERS
    ===================================================== */
+/* =====================================================
+   v21 — PERSISTENT PANEL: _tsShowPhase
+   Updates the always-visible status row; never hides the
+   comparison card. Old panel IDs are hidden dummies —
+   left them alone so legacy getElementById refs don't error.
+   ===================================================== */
 function _tsShowPhase(phase) {
-  const comp      = document.getElementById('tpComparison');
-  const waiting   = document.getElementById('tpWaiting');
-  const evalDiv   = document.getElementById('tpEvaluating');
-  const autoPlay  = document.getElementById('tpAutoPlay');
-  const actions   = document.getElementById('tpActions');
-  const retryDiv  = document.getElementById('tpRetryPrompt');
+  const statusRow  = document.getElementById('tpStatusRow');
+  const statusIcon = document.getElementById('tpStatusIcon');
+  const statusTitl = document.getElementById('tpStatusTitle');
+  const statusSub  = document.getElementById('tpStatusSub');
+  const retryDots  = document.getElementById('tpRetryDots');
   const hintReveal = document.getElementById('tpHintReveal');
+  const actions    = document.getElementById('tpActions');
+  const comp       = document.getElementById('tpComparison');
 
-  if (comp)       comp.style.display      = 'none';
-  if (waiting)    waiting.style.display   = 'none';
-  if (evalDiv)    evalDiv.style.display   = 'none';
-  if (autoPlay)   autoPlay.style.display  = 'none';
-  if (retryDiv)   retryDiv.style.display  = 'none';
+  // Clear any click-to-move selection on every phase transition
+  cmClearSelection();
+
+  // Always hide hint reveal between phases
   if (hintReveal) hintReveal.style.display = 'none';
+  // Always hide retry dots unless retry phase
+  if (retryDots) retryDots.style.display = 'none';
+
+  // Update status row class (controls colour/animation)
+  const phaseClass = 'tp-status-' + phase.replace(/_/g, '-');
+  if (statusRow) statusRow.className = 'tp-status-row ' + phaseClass;
 
   if (phase === 'waiting' || phase === 'waiting_pre') {
-    if (waiting) waiting.style.display = '';
+    const isPre = phase === 'waiting_pre';
+    if (statusIcon) statusIcon.innerHTML = isPre
+      ? '<div class="tp-eval-spinner"></div>'
+      : '<i class="fas fa-chess-knight"></i>';
+    if (statusTitl) statusTitl.textContent = isPre ? 'Analyzing…' : 'Your turn';
+    if (statusSub)  statusSub.textContent  = isPre
+      ? 'Engine analyzing the position…'
+      : 'Tap a piece or drag it to guess the next move';
     if (actions) actions.style.display = '';
-    const sub = document.getElementById('tpWaitingSub');
-    if (sub) sub.textContent = phase === 'waiting_pre'
-      ? 'Engine analyzing position…'
-      : 'Drag your piece on the board';
+    // Reset comparison values to dashes for this new move, then dim
+    _tsClearComparisonCard();
+    if (comp) comp.classList.add('tp-comp-dim');
+    // Legacy dummy compat
+    const oldSub = document.getElementById('tpWaitingSub');
+    if (oldSub) oldSub.textContent = isPre ? 'Engine analyzing position…' : 'Drag your piece on the board';
+
   } else if (phase === 'evaluating') {
-    if (evalDiv) evalDiv.style.display = '';
+    if (statusIcon) statusIcon.innerHTML = '<div class="tp-eval-spinner"></div>';
+    if (statusTitl) statusTitl.textContent = 'Evaluating…';
+    if (statusSub)  statusSub.textContent  = 'Engine is scoring your move';
     if (actions) actions.style.display = 'none';
+    if (comp) comp.classList.add('tp-comp-dim');
+
   } else if (phase === 'auto_play') {
-    if (autoPlay) autoPlay.style.display = '';
-    if (actions)  actions.style.display  = 'none';
-  } else if (phase === 'retry') {
-    if (retryDiv) retryDiv.style.display = '';
-    if (actions)  actions.style.display  = '';
-  } else if (phase === 'complete') {
-    if (waiting) {
-      waiting.style.display = '';
-      const wt = document.getElementById('tpWaitingTitle');
-      const ws = document.getElementById('tpWaitingSub');
-      if (wt) wt.textContent = 'Training Complete!';
-      if (ws) ws.textContent = 'Generating your report…';
-    }
+    if (statusIcon) statusIcon.innerHTML = '<i class="fas fa-robot"></i>';
+    if (statusTitl) statusTitl.textContent = 'Opponent plays';
+    if (statusSub)  statusSub.textContent  = '…';   // caller will overwrite immediately
     if (actions) actions.style.display = 'none';
+    // Keep comparison visible and un-dimmed
+    if (comp) comp.classList.remove('tp-comp-dim');
+
+  } else if (phase === 'retry') {
+    if (statusIcon) statusIcon.innerHTML = '<i class="fas fa-lightbulb"></i>';
+    if (statusTitl) statusTitl.textContent = 'Try again!';
+    if (statusSub)  statusSub.textContent  = 'Find the strongest move on the board';
+    if (retryDots) retryDots.style.display = '';
+    if (actions) actions.style.display = '';
+    if (comp) comp.classList.remove('tp-comp-dim');
+
+  } else if (phase === 'complete') {
+    if (statusIcon) statusIcon.innerHTML = '<i class="fas fa-flag-checkered"></i>';
+    if (statusTitl) statusTitl.textContent = 'Training Complete!';
+    if (statusSub)  statusSub.textContent  = 'Generating your performance report…';
+    if (actions) actions.style.display = 'none';
+    if (comp) comp.classList.remove('tp-comp-dim');
   }
+}
+
+/* Reset comparison card to dashes for the start of each new move (v21).
+   Called by _tsShowPhase('waiting') so the card is clean before the user guesses. */
+function _tsClearComparisonCard() {
+  const ids = ['tpUserSAN','tpGameSAN','tpEngineSAN'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
+  ['tpUserTag','tpGameTag'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = ''; el.style.cssText = ''; }
+  });
+  const engineEv  = document.getElementById('tpEngineEval');
+  const cplVal    = document.getElementById('tpCplVal');
+  const ptsChange = document.getElementById('tpPtsChange');
+  const feedbackEl = document.getElementById('tpFeedbackText');
+  if (engineEv)  { engineEv.textContent = ''; }
+  if (cplVal)    { cplVal.textContent = '—'; cplVal.style.color = ''; }
+  if (ptsChange) { ptsChange.textContent = ''; }
+  if (feedbackEl){ feedbackEl.textContent = ''; }
+
+  // Reset quality banner to neutral
+  const banner = document.getElementById('tpQualityBanner');
+  const icon   = document.getElementById('tpQualityIcon');
+  const label  = document.getElementById('tpQualityLabel');
+  if (banner) banner.className = 'tp-quality-banner';
+  if (icon)   icon.className   = 'tp-quality-icon';
+  if (label)  label.textContent = 'Waiting for move…';
+}
+
+/* Flash a DOM element briefly when its value updates in-place (v21) */
+function _tsFlashValue(el) {
+  if (!el) return;
+  el.classList.remove('tp-val-flash');
+  // Force reflow so re-adding the class restarts the animation
+  void el.offsetWidth;
+  el.classList.add('tp-val-flash');
+  setTimeout(() => el.classList.remove('tp-val-flash'), 600);
 }
 
 function _tsShowComparison(cpLoss, cls, finalPts) {
@@ -3788,14 +4097,14 @@ function _tsShowComparison(cpLoss, cls, finalPts) {
   const userTag   = document.getElementById('tpUserTag');
   const gameTag   = document.getElementById('tpGameTag');
 
-  if (userSAN)   userSAN.textContent   = TS.userMoveSAN || '—';
-  if (gameSAN)   gameSAN.textContent   = TS.gameMoveSAN || '—';
-  if (engineSAN) engineSAN.textContent = TS.engineBestSAN || '—';
+  if (userSAN)   { userSAN.textContent   = TS.userMoveSAN || '—';    _tsFlashValue(userSAN); }
+  if (gameSAN)   { gameSAN.textContent   = TS.gameMoveSAN || '—';    _tsFlashValue(gameSAN); }
+  if (engineSAN) { engineSAN.textContent = TS.engineBestSAN || '—';  _tsFlashValue(engineSAN); }
 
   // Engine eval display
   const preEvStr = TS.preIsMate ? 'M' + Math.abs(TS.preEval)
     : (TS.preEval >= 0 ? '+' : '') + (TS.preEval / 100).toFixed(2);
-  if (engineEv) engineEv.textContent = preEvStr;
+  if (engineEv) { engineEv.textContent = preEvStr; _tsFlashValue(engineEv); }
 
   // Tags for user/game moves
   const isSameAsEngine = TS.engineBestSAN && TS.engineBestSAN === TS.userMoveSAN;
@@ -3834,10 +4143,12 @@ function _tsShowComparison(cpLoss, cls, finalPts) {
   if (cplVal) {
     cplVal.textContent = cpLoss <= 0 ? '0 (improved!)' : cpLoss;
     cplVal.style.color = cpLoss > 250 ? '#dc2626' : cpLoss > 80 ? '#f97316' : '#22c55e';
+    _tsFlashValue(cplVal);
   }
   if (ptsChange) {
     ptsChange.textContent = `+${finalPts} pts`;
     ptsChange.style.color = finalPts >= 80 ? '#22c55e' : finalPts >= 55 ? '#fb923c' : '#ef4444';
+    _tsFlashValue(ptsChange);
   }
 
   // Feedback text
@@ -3849,12 +4160,30 @@ function _tsShowComparison(cpLoss, cls, finalPts) {
     );
   }
 
-  // Show the comparison card; hide spinner + waiting
-  const evalDiv = document.getElementById('tpEvaluating');
-  const waiting  = document.getElementById('tpWaiting');
-  if (evalDiv) evalDiv.style.display = 'none';
-  if (waiting)  waiting.style.display  = 'none';
-  comp.style.display = '';
+  // Update the status row to show the quality label (v21)
+  const statusTitl = document.getElementById('tpStatusTitle');
+  const statusSub  = document.getElementById('tpStatusSub');
+  const statusIcon = document.getElementById('tpStatusIcon');
+  const statusRow  = document.getElementById('tpStatusRow');
+  if (statusRow) {
+    const q = cls.quality;
+    const qPhase = (q === 'exact' || q === 'excellent') ? 'tp-status-complete'
+      : (q === 'good') ? 'tp-status-good'
+      : 'tp-status-retry';
+    statusRow.className = 'tp-status-row ' + qPhase;
+  }
+  if (statusIcon) statusIcon.innerHTML = cls.quality === 'blunder' ? '<i class="fas fa-times-circle"></i>'
+    : cls.quality === 'mistake'  ? '<i class="fas fa-exclamation-circle"></i>'
+    : cls.quality === 'exact'    ? '<i class="fas fa-star"></i>'
+    : '<i class="fas fa-check-circle"></i>';
+  if (statusTitl) statusTitl.textContent = cls.label || 'Move scored';
+  if (statusSub)  statusSub.textContent  = cpLoss <= 0
+    ? 'Your move was at least as good as the engine!'
+    : `Centipawn loss: ${cpLoss}`;
+
+  // v21: comparison card is always visible — just un-dim it
+  const comp2 = document.getElementById('tpComparison');
+  if (comp2) comp2.classList.remove('tp-comp-dim');
 }
 
 function _tsUpdateLiveStats() {
@@ -3988,4 +4317,17 @@ document.addEventListener('DOMContentLoaded', function() {
       syncBoardSize();
     });
   }
+
+  // ── v23: Production hardening — engine cleanup on navigation ──
+  // Stops Stockfish worker so it doesn't persist as a zombie when the user
+  // navigates away, switches tabs, or the browser kills the page on iOS.
+  function _stopEngineOnExit() {
+    try {
+      if (typeof stopEngine === 'function') stopEngine();
+      else if (window._stockfishWorker) { window._stockfishWorker.terminate(); }
+    } catch (e) { /* silent — page is already unloading */ }
+  }
+  window.addEventListener('beforeunload', _stopEngineOnExit);
+  // pagehide fires on iOS Safari (where beforeunload is unreliable)
+  window.addEventListener('pagehide', _stopEngineOnExit);
 });
