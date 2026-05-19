@@ -2576,6 +2576,9 @@ function _tsStart(side) {
   TS._retryRevealRecorded = false; // prevents double-recording when revealed from retry
   TS._autoContTimer       = null;  // timer handle for auto-continue on good moves
   TS._pendingRevealPlay   = null;  // { needUndo } when reveal-play timer is active
+  TS._preMovePosition     = null;  // FEN snapshot before user drops (for clean revert)
+  TS._userDropSrc         = null;  // source square of last user drop
+  TS._userDropDst         = null;  // target square of last user drop
 
   // Stop regular engine (training uses engine internally)
   if (state.engineEnabled) {
@@ -2731,6 +2734,18 @@ function _tsFlashOpponentSquare(square) {
   setTimeout(() => sq.classList.remove('ts-opp-flash'), 750);
 }
 
+/* Flash the board card with a red glow when the player plays a wrong move.
+   Fires immediately when the engine result comes back so the player gets
+   instant visual feedback that the move was rejected before the board reverts. */
+function _tsFlashWrongMove() {
+  const card = document.querySelector('.board-card');
+  if (!card) return;
+  card.classList.remove('ts-wrong-flash'); // reset if already animating
+  void card.offsetWidth;                  // force reflow to restart animation
+  card.classList.add('ts-wrong-flash');
+  setTimeout(() => card.classList.remove('ts-wrong-flash'), 800);
+}
+
 /* =====================================================
    USER DROP HANDLER (called from onDrop when TS.active)
    ===================================================== */
@@ -2743,7 +2758,13 @@ function _tsOnDrop(source, target) {
   const tryMove  = tmpG.move({ from: source, to: target, promotion: 'q' });
   if (!tryMove) return 'snapback'; // illegal
 
-  TS.userMoveSAN = tryMove.san;
+  TS.userMoveSAN   = tryMove.san;
+  TS._userDropSrc  = source;   // for red-flash on bad move
+  TS._userDropDst  = target;   // for red-flash on bad move
+
+  // Snapshot position BEFORE applying — used by _tsHandleRetry to revert cleanly
+  TS._preMovePosition = state.game.fen();
+
   TS.isExactMatch = (TS.gameMoveObj &&
     source === TS.gameMoveObj.from &&
     target === TS.gameMoveObj.to);
@@ -2784,7 +2805,9 @@ function _tsRunPreEval() {
   TS.preFen = state.game.fen();
   state.engine.postMessage('stop');
   state.engine.postMessage('position fen ' + TS.preFen);
-  state.engine.postMessage('go depth 18');
+  // movetime 1200ms: fast enough that the board reverts within ~1s on bad moves
+  // yet still reaches depth 14-16 — more than enough accuracy for training feedback.
+  state.engine.postMessage('go movetime 1200 depth 14');
 }
 
 /* =====================================================
@@ -2800,7 +2823,8 @@ function _tsRunPostEval() {
   TS.postIsMate  = false;
   state.engine.postMessage('stop');
   state.engine.postMessage('position fen ' + state.game.fen()); // after user's move
-  state.engine.postMessage('go depth 16');
+  // Faster post-eval: 800ms is plenty to score the move accurately for training.
+  state.engine.postMessage('go movetime 800 depth 12');
 }
 
 /* =====================================================
@@ -2905,11 +2929,36 @@ function _tsCompleteEvaluation() {
   // ── Classify ──
   const cls = _tsClassify(cpLoss, TS.isExactMatch);
 
-  // ── Retry path: Mistake or Blunder within retry limit ──
-  const requiresRetry = (cls.quality === 'mistake' || cls.quality === 'blunder');
+  // ── Retry path (uses cls.accept flag — see _tsClassify) ──
+  // ACCEPT = exact / excellent / good (≤80cp) → auto-continue
+  // REJECT = mistake / blunder (>80cp)        → revert + retry
+  const requiresRetry = !cls.accept;
+
   if (requiresRetry && TS.retryCount < TS.maxRetries) {
+    // Flash the board red so the player immediately sees the move was wrong,
+    // then _tsHandleRetry() will undo it and set up the retry phase.
+    _tsFlashWrongMove();
     _tsHandleRetry(cpLoss, cls);
     return; // don't record result yet — player may improve
+  }
+
+  // ── All retries exhausted or move accepted ──
+
+  // CRITICAL FIX: When retries are exhausted the wrong move is still on the board.
+  // We must undo it IMMEDIATELY (before showing the comparison card) so the user
+  // never sees an inconsistent board.  The reveal-play timer will then animate
+  // the correct game move onto a clean board.
+  let needUndoForReveal = false;
+  if (requiresRetry) {
+    // Flash red one last time so the player knows this was wrong
+    _tsFlashWrongMove();
+    // Undo wrong move right now — board returns to pre-move position
+    state.game.undo();
+    state.currentMoveIdx--;
+    state.board.position(TS._preMovePosition || state.game.fen(), false);
+    updateSideIndicator();
+    updateBoardStatus();
+    needUndoForReveal = false; // already undone — reveal-play won't undo again
   }
 
   // ── Apply all penalties ──
@@ -2917,7 +2966,7 @@ function _tsCompleteEvaluation() {
   const finalPts = Math.max(0, basePts - TS.retryPenalty);
 
   // ── Store result ──
-  const moveNum = Math.ceil(state.currentMoveIdx / 2);
+  const moveNum = Math.ceil((state.currentMoveIdx + (requiresRetry ? 1 : 0)) / 2);
   TS.results.push({
     moveNum,
     userSAN:   TS.userMoveSAN,
@@ -2945,12 +2994,12 @@ function _tsCompleteEvaluation() {
 
   // ── Auto-continue or auto-reveal-play ──
   if (!requiresRetry) {
-    // Good move (Excellent/Good/Inaccuracy) — auto-continue normally
+    // Good move (Exact / Excellent / Good) — show feedback briefly, then continue
     _tsStartAutoContTimer();
   } else {
-    // Retries exhausted — board has player's wrong move on it.
-    // Reveal answer, then undo wrong move + play actual game move automatically.
-    _tsStartRevealPlayTimer(true); // needUndo = true
+    // Retries exhausted — board is already clean (undo done above).
+    // Show comparison for a moment, then animate the CORRECT game move onto the board.
+    _tsStartRevealPlayTimer(needUndoForReveal); // needUndo = false — already clean
   }
 }
 
@@ -3066,13 +3115,27 @@ function _tsHandleRetry(cpLoss, cls) {
   TS._lastCpLoss = cpLoss;
   TS._lastCls    = cls;
 
-  // Undo the bad move — restore board to pre-move state
+  // ── Undo the bad move immediately — piece snaps back to origin square ──
   state.game.undo();
   state.currentMoveIdx--;
-  state.board.position(state.game.fen(), false);
-  updateAll();
+  // Use the pre-move snapshot for a clean, reliable revert
+  state.board.position(TS._preMovePosition || state.game.fen(), false);
+  updateSideIndicator();
+  updateBoardStatus();
+  // (Don't call renderMoveList — that would briefly flash the wrong move in the list)
 
-  // Switch to retry phase (allows drag/drop)
+  // ── Progressive auto-hints per attempt ──
+  // Attempt 1 → clear hints, let player search freely
+  // Attempt 2 → auto-highlight the source square so they know which piece to move
+  _tsClearSquareHints();
+  if (TS.retryCount >= 2 && TS.gameMoveObj) {
+    const sq = document.querySelector(`.square-55d63[data-square="${TS.gameMoveObj.from}"]`);
+    if (sq) sq.classList.add('sq-hint-from');
+    TS.hintLevel = Math.max(TS.hintLevel, 2); // mark hint used so penalty applies
+    TS.hintPenalty = Math.max(TS.hintPenalty, 20);
+  }
+
+  // Switch to retry phase (allows drag/drop again)
   TS.phase = 'retry';
   _tsShowRetryPrompt();
 }
@@ -3091,32 +3154,37 @@ function _tsShowRetryPrompt() {
   if (retryDiv) retryDiv.style.display = '';
   if (actions)  actions.style.display  = '';
 
-  // Message content
-  const title = document.getElementById('tpRetryTitle');
-  const sub   = document.getElementById('tpRetrySub');
-  const dots  = document.getElementById('tpRetryDots');
-  const triesLeft   = TS.maxRetries - TS.retryCount;
-  const isBlunder   = TS._lastCls && TS._lastCls.quality === 'blunder';
+  // ── ChessBase-style progressive retry messages ──
+  const title     = document.getElementById('tpRetryTitle');
+  const sub       = document.getElementById('tpRetrySub');
+  const dots      = document.getElementById('tpRetryDots');
+  const triesLeft = TS.maxRetries - TS.retryCount;
+  const isBlunder = TS._lastCls && TS._lastCls.quality === 'blunder';
+  const cpLoss    = TS._lastCpLoss || 0;
 
-  const titleOptions = [
-    'There\'s a stronger move here!',
-    'Keep thinking — you can find it!',
-  ];
-  const subOptions = isBlunder ? [
-    'That move seriously damages the position. Look harder for a better option!',
-    'The engine sees a much stronger continuation. One more try!',
-  ] : [
-    'That move weakens your position. There\'s a better continuation available.',
-    'Consider your opponent\'s threats and your piece activity.',
-  ];
+  // First attempt (retryCount === 1): encouraging, no spoilers
+  // Second attempt (retryCount === 2): stronger hint language, source square already highlighted
+  const msgs = {
+    1: {
+      title: 'There is a stronger move here!',
+      sub: isBlunder
+        ? `That move seriously weakens the position (${cpLoss}cp lost). Look harder — find the best continuation!`
+        : `The engine found a significantly better move (${cpLoss}cp difference). Think about your piece activity and your opponent's threats.`,
+    },
+    2: {
+      title: 'Look carefully — one more chance!',
+      sub: isBlunder
+        ? `Still not the right idea. The highlighted piece is the key — where should it go?`
+        : `The piece to move is highlighted on the board. Which square gives it maximum impact?`,
+    },
+  };
 
-  const idx = Math.min(TS.retryCount - 1, titleOptions.length - 1);
-  if (title) title.textContent = titleOptions[idx];
+  const m = msgs[Math.min(TS.retryCount, 2)];
+  if (title) title.textContent = m.title;
   if (sub) {
-    const s = subOptions[Math.min(TS.retryCount - 1, subOptions.length - 1)];
     sub.textContent = triesLeft > 0
-      ? s + ` (${triesLeft} tr${triesLeft === 1 ? 'y' : 'ies'} remaining)`
-      : s;
+      ? m.sub + ` (${triesLeft} attempt${triesLeft === 1 ? '' : 's'} remaining)`
+      : m.sub;
   }
 
   // Attempt indicator dots
@@ -3129,15 +3197,23 @@ function _tsShowRetryPrompt() {
     }
   }
 
-  // Buttons: Hint + Show Answer; hide Continue/Retry
+  // Buttons
   const hintBtn = document.getElementById('btnTpHint');
   const revBtn  = document.getElementById('btnTpReveal');
   const retBtn  = document.getElementById('btnTpRetry');
   const contBtn = document.getElementById('btnTpContinue');
 
-  if (hintBtn) { hintBtn.style.display = '';     hintBtn.disabled = false; hintBtn.style.opacity = ''; }
-  if (revBtn)  { revBtn.style.display  = '';     revBtn.disabled  = false; revBtn.style.opacity  = '';
-                 revBtn.innerHTML = '<i class="fas fa-eye"></i> Show Answer'; }
+  if (hintBtn) {
+    hintBtn.style.display  = '';
+    hintBtn.disabled       = TS.hintLevel >= 3;
+    hintBtn.style.opacity  = TS.hintLevel >= 3 ? '0.4' : '';
+  }
+  if (revBtn) {
+    revBtn.style.display   = '';
+    revBtn.disabled        = false;
+    revBtn.style.opacity   = '';
+    revBtn.innerHTML       = '<i class="fas fa-eye"></i> Show Answer';
+  }
   if (retBtn)  retBtn.style.display  = 'none';
   if (contBtn) contBtn.style.display = 'none';
 }
@@ -3187,9 +3263,19 @@ function _tsForceRevealFromRetry() {
   TS.phase = 'feedback';
   _tsSetActionBtns({ hint:false, reveal:false, retry:false, continue:true });
 
-  // Board is at the pre-move position (undo already happened in _tsHandleRetry).
-  // Start the reveal-play timer: show comparison for a moment, then animate
-  // the actual game move onto the board automatically (needUndo = false).
+  // Board is already at the pre-move position (undo happened in _tsHandleRetry).
+  // Highlight the game move squares so the player can see the answer clearly.
+  const gm2 = TS.gameMoveObj;
+  if (gm2) {
+    _tsClearSquareHints();
+    const sqFrom = document.querySelector(`.square-55d63[data-square="${gm2.from}"]`);
+    const sqTo   = document.querySelector(`.square-55d63[data-square="${gm2.to}"]`);
+    if (sqFrom) sqFrom.classList.add('sq-hint-from');
+    if (sqTo)   sqTo.classList.add('sq-hint-to');
+  }
+
+  // Start reveal-play timer: show comparison for a moment, then animate
+  // the actual game move onto the board automatically (needUndo = false — already clean).
   _tsStartRevealPlayTimer(false);
 }
 
@@ -3197,13 +3283,18 @@ function _tsForceRevealFromRetry() {
    MOVE CLASSIFICATION (engine-quality scoring)
    ===================================================== */
 function _tsClassify(cpLoss, isExactMatch) {
-  if (isExactMatch)   return { quality:'exact',      label:'⭐ Exact Match!',    points:100, color:'#f59e0b' };
-  if (cpLoss <= 0)    return { quality:'excellent',  label:'✓ Excellent!',       points:100, color:'#22c55e' };
-  if (cpLoss <= 30)   return { quality:'excellent',  label:'✓ Excellent',        points: 95, color:'#22c55e' };
-  if (cpLoss <= 80)   return { quality:'good',       label:'✓ Good Move',        points: 80, color:'#86efac' };
-  if (cpLoss <= 150)  return { quality:'inaccuracy', label:'?! Inaccuracy',      points: 55, color:'#fb923c' };
-  if (cpLoss <= 300)  return { quality:'mistake',    label:'? Mistake',          points: 20, color:'#f97316' };
-  return                     { quality:'blunder',    label:'?? Blunder',         points:  0, color:'#dc2626' };
+  // ChessBase 18-style thresholds.
+  // ACCEPT (auto-continue): exact match, excellent, good, or slight inaccuracy (≤ 80cp).
+  // REJECT (retry):         mistake (≤ 250cp) or blunder (> 250cp).
+  // The old ≤150cp "inaccuracy" tier was too lenient — moves like b4 when h4 is
+  // correct (≈120cp loss) were being accepted.  Anything > 80cp now forces a retry.
+  if (isExactMatch)   return { quality:'exact',      label:'⭐ Exact Match!',         accept:true,  points:100, color:'#f59e0b' };
+  if (cpLoss <= 0)    return { quality:'excellent',  label:'✓ Excellent!',            accept:true,  points:100, color:'#22c55e' };
+  if (cpLoss <= 20)   return { quality:'excellent',  label:'✓ Excellent',             accept:true,  points: 97, color:'#22c55e' };
+  if (cpLoss <= 60)   return { quality:'good',       label:'✓ Good Move',             accept:true,  points: 85, color:'#86efac' };
+  if (cpLoss <= 80)   return { quality:'good',       label:'✓ Good Alternative',      accept:true,  points: 75, color:'#86efac' };
+  if (cpLoss <= 250)  return { quality:'mistake',    label:'? Mistake',               accept:false, points:  0, color:'#f97316' };
+  return                     { quality:'blunder',    label:'?? Blunder',              accept:false, points:  0, color:'#dc2626' };
 }
 
 /* =====================================================
@@ -3216,17 +3307,19 @@ function _tsFeedbackText(cpLoss, cls, isExact, engineSAN, gameSAN, userSAN) {
     : (TS.preEval  >= 0 ? '+' : '') + (TS.preEval  / 100).toFixed(2);
   const postStr = TS.postIsMate ? 'M' + Math.abs(TS.postEval)
     : (TS.postEval >= 0 ? '+' : '') + (TS.postEval / 100).toFixed(2);
-  const evalChange = `(eval: ${preStr} → ${postStr})`;
+  const evalChange = `Eval: ${preStr} → ${postStr}`;
+  const attempts   = TS.retryCount > 0 ? ` (found after ${TS.retryCount + 1} attempts)` : '';
 
   if (isExact && sameAsEngine) return `Perfect — you found both the game move and the engine's top choice! ${evalChange}`;
   if (isExact)    return `You matched the master's move. Well played! ${evalChange}`;
-  if (cpLoss <= 0 && sameAsEngine) return `Even stronger than the game! The engine agrees — your move is best here. ${evalChange}`;
-  if (cpLoss <= 0)  return `Your move is at least as strong as the game move — no disadvantage. ${evalChange}`;
-  if (cpLoss <= 30) return `Excellent choice! Only ${cpLoss}cp difference — practically equivalent to the game move. ${evalChange}`;
-  if (cpLoss <= 80) return `Good move! The game's ${gameSAN} was slightly better by ${cpLoss}cp, but yours is solid. ${evalChange}`;
-  if (cpLoss <= 150) return `Inaccuracy — ${gameSAN} keeps a clearer advantage. Your move cost ${cpLoss}cp, but the game continues. ${evalChange}`;
-  if (cpLoss <= 300) return `Mistake — this weakens the position (${cpLoss}cp lost). You needed ${TS.retryCount} attempt(s). The game played ${gameSAN}. ${evalChange}`;
-  return `Blunder — this severely damages the position (${cpLoss}cp lost). You needed ${TS.retryCount} attempt(s). Study what ${gameSAN} accomplished. ${evalChange}`;
+  if (cpLoss <= 0 && sameAsEngine) return `Even stronger than the game! The engine confirms your move is the best in this position. ${evalChange}`;
+  if (cpLoss <= 0)  return `Your move is at least as strong as the game — no positional disadvantage. ${evalChange}`;
+  if (cpLoss <= 20) return `Excellent! Only ${cpLoss}cp difference — essentially the same strength as the game's ${gameSAN}. ${evalChange}`;
+  if (cpLoss <= 60) return `Good move! ${gameSAN} was slightly more precise (${cpLoss}cp), but your choice keeps a solid position. ${evalChange}`;
+  if (cpLoss <= 80) return `Good alternative. ${gameSAN} keeps a clearer edge by ${cpLoss}cp, but your move is acceptable. ${evalChange}`;
+  // Mistake / Blunder — these only reach feedback after retries exhausted
+  if (cpLoss <= 250) return `Mistake — ${gameSAN} was the correct idea here (${cpLoss}cp difference). ${evalChange}${attempts} Study how the game move controls the position.`;
+  return `Blunder — ${gameSAN} was much stronger (${cpLoss}cp lost). ${evalChange}${attempts} Pay close attention to how the game continues from here.`;
 }
 
 /* =====================================================
@@ -3627,9 +3720,8 @@ function _tsShowComparison(cpLoss, cls, finalPts) {
     banner.className = 'tp-quality-banner q-' + cls.quality;
     if (label) label.textContent = cls.label;
     if (icon)  icon.className = cls.quality === 'blunder' ? 'fas fa-times-circle tp-quality-icon'
-      : cls.quality === 'mistake' ? 'fas fa-exclamation-circle tp-quality-icon'
-      : cls.quality === 'inaccuracy' ? 'fas fa-question-circle tp-quality-icon'
-      : cls.quality === 'exact' ? 'fas fa-star tp-quality-icon'
+      : cls.quality === 'mistake'    ? 'fas fa-exclamation-circle tp-quality-icon'
+      : cls.quality === 'exact'      ? 'fas fa-star tp-quality-icon'
       : 'fas fa-check-circle tp-quality-icon';
   }
 
@@ -3662,7 +3754,7 @@ function _tsShowComparison(cpLoss, cls, finalPts) {
     } else if (TS.isExactMatch) {
       userTag.textContent = '♟ Game';
       userTag.style.cssText = 'background:rgba(37,99,235,0.15);color:#60a5fa';
-    } else if (cpLoss <= 30) {
+    } else if (cpLoss <= 60) {
       userTag.textContent = '✓ Strong';
       userTag.style.cssText = 'background:rgba(74,222,128,0.1);color:#4ade80';
     } else {
@@ -3686,7 +3778,7 @@ function _tsShowComparison(cpLoss, cls, finalPts) {
   const ptsChange = document.getElementById('tpPtsChange');
   if (cplVal) {
     cplVal.textContent = cpLoss <= 0 ? '0 (improved!)' : cpLoss;
-    cplVal.style.color = cpLoss > 150 ? '#ef4444' : cpLoss > 80 ? '#fb923c' : '#22c55e';
+    cplVal.style.color = cpLoss > 250 ? '#dc2626' : cpLoss > 80 ? '#f97316' : '#22c55e';
   }
   if (ptsChange) {
     ptsChange.textContent = `+${finalPts} pts`;
