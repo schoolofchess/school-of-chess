@@ -2994,8 +2994,22 @@ function _tsCompleteEvaluation() {
 
   // ── Auto-continue or auto-reveal-play ──
   if (!requiresRetry) {
-    // Good move (Exact / Excellent / Good) — show feedback briefly, then continue
-    _tsStartAutoContTimer();
+    if (TS.isExactMatch) {
+      // ── Exact game move ──
+      // The user played exactly what the PGN says.  state.game is already on the
+      // correct historical line.  Just show feedback, then continue normally.
+      _tsStartAutoContTimer();
+    } else {
+      // ── Good alternative (Nf3 instead of f4, etc.) ──
+      // CRITICAL: The user's move is applied to state.game, so the position has
+      // diverged from the PGN line.  If we call _tsNextMove() from here the
+      // opponent would play the PGN response to f4 against an Nf3 position —
+      // that move may be illegal and will certainly destroy the historical game.
+      //
+      // ChessBase 18 fix: revert the alternative, play the actual game move,
+      // then resume the PGN line from the correct historical position.
+      _tsStartAltMoveTimer();
+    }
   } else {
     // Retries exhausted — board is already clean (undo done above).
     // Show comparison for a moment, then animate the CORRECT game move onto the board.
@@ -3030,6 +3044,37 @@ function _tsStartAutoContTimer() {
     TS._autoContTimer = null;
     if (contBtn) contBtn.classList.remove('tp-auto-cont');
     _tsContinue();
+  }, DELAY);
+}
+
+/* =====================================================
+   ALT-MOVE TIMER
+   For accepted non-exact moves (good alternative):
+   Show feedback for the normal speed delay, then revert the user's move
+   and animate the actual PGN game move so training stays on the historical line.
+   ===================================================== */
+function _tsStartAltMoveTimer() {
+  const DELAY = _tsGetDelay(); // respects user speed preference — no forced 2.5s minimum
+
+  if (TS._autoContTimer) { clearTimeout(TS._autoContTimer); TS._autoContTimer = null; }
+
+  // Queue a reveal-play action so _tsContinue() (manual click) also does the right thing
+  TS._pendingRevealPlay = { needUndo: true };
+
+  const contBtn = document.getElementById('btnTpContinue');
+  if (contBtn) {
+    contBtn.style.setProperty('--tp-auto-dur', DELAY + 'ms');
+    contBtn.classList.add('tp-auto-cont');
+    contBtn.innerHTML = '<i class="fas fa-chess-king"></i> Playing game move…';
+    contBtn.style.display = '';
+  }
+
+  TS._autoContTimer = setTimeout(function () {
+    TS._autoContTimer = null;
+    if (contBtn) contBtn.classList.remove('tp-auto-cont');
+    const action = TS._pendingRevealPlay;
+    TS._pendingRevealPlay = null;
+    _tsPlayGameMoveAndContinue(action ? action.needUndo : true);
   }, DELAY);
 }
 
@@ -3075,25 +3120,35 @@ function _tsPlayGameMoveAndContinue(needUndo) {
   TS.phase = 'auto_play';
   _tsClearSquareHints();
 
-  // Undo the player's wrong move when called from max-retry path
   if (needUndo) {
+    // Undo the user's move in chess.js
     state.game.undo();
     state.currentMoveIdx--;
+
+    // CRITICAL: snap the board back to the pre-move visual position IMMEDIATELY.
+    // Without this the board still shows the user's alternative (e.g. knight on f3)
+    // and the subsequent animation of the game move (f4 pawn) looks visually broken —
+    // it animates from the wrong starting state.
+    state.board.position(TS._preMovePosition || state.game.fen(), false);
+    updateSideIndicator();
+    updateBoardStatus();
   }
 
   const gm = TS.gameMoveObj;
   if (!gm) { setTimeout(_tsNextMove, 300); return; }
 
-  // Show "Game: Nf3" in the auto-play indicator so player knows what's happening
+  // Show "Game: f4" in the auto-play indicator
   _tsShowPhase('auto_play');
   const autoText = document.getElementById('tpAutoPlayText');
   if (autoText) autoText.textContent = `Game: ${TS.gameMoveSAN}`;
 
   const destSquare = gm.to;
+  // Brief pause (300 ms) so the player can see the board is back to the
+  // pre-move position before the game move slides in.
   setTimeout(function () {
     state.game.move(gm);
     state.currentMoveIdx++;
-    state.board.position(state.game.fen(), true); // animated slide
+    state.board.position(state.game.fen(), true); // smooth animated slide
     updateSideIndicator();
     updateBoardStatus();
     renderMoveList();
