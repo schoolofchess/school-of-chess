@@ -1192,6 +1192,84 @@ kbd {
     font-weight: 700;
 }
 
+/* ── v24 — Variation notation ────────────────────────────────
+   Displayed inline in the move list when the user deviates from the PGN.
+   ──────────────────────────────────────────────────────────── */
+
+/* Variation move — teal/cyan tint to distinguish from main-line blue */
+.move-cell.var-move {
+    color: rgba(94,234,212,0.85);
+    border-color: rgba(94,234,212,0.18);
+}
+.move-cell.var-move:hover {
+    background: rgba(94,234,212,0.1);
+    color: #5eead4;
+    border-color: rgba(94,234,212,0.3);
+}
+.move-cell.var-move.active-move {
+    background: rgba(20,184,166,0.8);
+    border-color: rgba(20,184,166,0.9);
+    color: #fff;
+}
+
+/* Dimmed main-line moves (shown after branch point — not yet played) */
+.move-cell.main-dim {
+    opacity: 0.38;
+    font-style: italic;
+}
+.move-num-cell.main-dim {
+    opacity: 0.28;
+    font-style: italic;
+}
+.move-cell.main-dim:hover {
+    opacity: 0.7;
+}
+
+/* Variation punctuation: ( and ) brackets */
+.var-open-bracket,
+.var-close-bracket {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    color: rgba(94,234,212,0.5);
+    padding: 0 0.15rem;
+    user-select: none;
+}
+
+/* "Main:" label before the dimmed main-line continuation */
+.var-mainline-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+    padding: 0.15rem 0.3rem 0.15rem 0.5rem;
+    user-select: none;
+}
+
+/* "← Main line" return button */
+.var-return-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: rgba(245,158,11,0.85);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 5px;
+    padding: 0.2rem 0.45rem;
+    margin: 0.2rem 0.15rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    user-select: none;
+    vertical-align: middle;
+}
+.var-return-btn:hover {
+    background: rgba(245,158,11,0.15);
+    color: #f5a623;
+    border-color: rgba(245,158,11,0.5);
+}
+
 /* ---- Tools card ---- */
 .tools-card {
     display: grid;

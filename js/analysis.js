@@ -110,12 +110,18 @@ const state = {
   engineReady:        false,
   notationHidden:     false,
   trainingMode:       false,
-  gameMoves:          [],     // verbose move list from loaded PGN
+  gameMoves:          [],     // verbose move list from loaded PGN (NEVER cleared on deviation)
   currentMoveIdx:     0,
   engineLines:        [],
   flipped:            false,
   boardEditorMode:    false,  // board editor active
   editorSelectedPiece: null,  // piece selected in editor palette (e.g. 'wQ')
+  // ---- PGN variation (v24) ----
+  // When the user plays a move that deviates from the loaded PGN, we preserve
+  // the original main line and record the alternative in these fields.
+  inVariation:        false,  // true while exploring a side branch
+  variationStart:     0,      // currentMoveIdx where the deviation began
+  variationMoves:     [],     // verbose move objects played in the variation
   // ---- Train mode stats ----
   trainStats: { correct: 0, wrong: 0, streak: 0 },
 };
@@ -294,11 +300,8 @@ function renderMoveList() {
   const container = document.getElementById('moveList');
   if (!container) return;
 
-  // Collect moves from the FULL game history if we have loaded PGN
-  // Otherwise use the current game's history
-  let history;
+  // ── Build SAN cache for main-line PGN (only when gameMoves changes) ──
   if (state.gameMoves.length > 0) {
-    // Only rebuild SAN cache when gameMoves array changes (new game loaded)
     if (state.gameMoves !== _cachedGameMovesRef) {
       const tmp = new Chess();
       _cachedGameMovesSANs = [];
@@ -308,32 +311,86 @@ function renderMoveList() {
       }
       _cachedGameMovesRef = state.gameMoves;
     }
-    history = _cachedGameMovesSANs;
   } else {
-    // Free-play mode: clear cache
     _cachedGameMovesRef  = null;
     _cachedGameMovesSANs = null;
-    history = state.game.history();
   }
 
-  if (history.length === 0) {
+  // ── No PGN and no moves → empty ──
+  const freeHistory = (state.gameMoves.length === 0) ? state.game.history() : null;
+  if (state.gameMoves.length === 0 && (!freeHistory || freeHistory.length === 0)) {
     container.innerHTML = '<span class="move-list-empty">Make a move to start</span>';
     return;
   }
 
   let html = '';
-  for (let i = 0; i < history.length; i++) {
-    if (i % 2 === 0) {
-      html += `<span class="move-num-cell">${Math.floor(i / 2) + 1}.</span>`;
+
+  if (state.gameMoves.length === 0) {
+    // ── Pure free-play: no PGN loaded ──
+    const activeIdx = state.game.history().length - 1;
+    for (let i = 0; i < freeHistory.length; i++) {
+      if (i % 2 === 0) html += `<span class="move-num-cell">${Math.floor(i/2)+1}.</span>`;
+      html += `<span class="move-cell${i === activeIdx ? ' active-move' : ''}" data-idx="${i}" onclick="navigateToMove(${i})">${freeHistory[i]}</span>`;
     }
 
-    // Determine active move index
-    const activeIdx = (state.gameMoves.length > 0)
-      ? state.currentMoveIdx - 1
-      : state.game.history().length - 1;
+  } else if (!state.inVariation) {
+    // ── PGN loaded, on main line ──
+    const mainSANs  = _cachedGameMovesSANs;
+    const activeIdx = state.currentMoveIdx - 1; // last played main-line half-move
 
-    const isActive = (i === activeIdx);
-    html += `<span class="move-cell${isActive ? ' active-move' : ''}" data-idx="${i}" onclick="navigateToMove(${i})">${history[i]}</span>`;
+    for (let i = 0; i < mainSANs.length; i++) {
+      if (i % 2 === 0) html += `<span class="move-num-cell">${Math.floor(i/2)+1}.</span>`;
+      html += `<span class="move-cell${i === activeIdx ? ' active-move' : ''}" data-idx="${i}" onclick="navigateToMove(${i})">${mainSANs[i]}</span>`;
+    }
+
+  } else {
+    // ── PGN loaded + IN VARIATION ──
+    // Section 1: Main-line moves up to the branch point
+    const mainSANs   = _cachedGameMovesSANs;
+    const branchIdx  = state.variationStart; // first main-line move NOT played
+
+    for (let i = 0; i < branchIdx; i++) {
+      if (i % 2 === 0) html += `<span class="move-num-cell">${Math.floor(i/2)+1}.</span>`;
+      html += `<span class="move-cell" data-idx="${i}" onclick="navigateToMove(${i})">${mainSANs[i]}</span>`;
+    }
+
+    // Section 2: Variation header
+    const branchMoveNum = Math.floor(branchIdx / 2) + 1;
+    const branchIsBlack = branchIdx % 2 === 1;
+    html += `<span class="var-open-bracket">(</span>`;
+    if (branchIsBlack) {
+      // Black's variation — prefix the move number with "…"
+      html += `<span class="move-num-cell">${branchMoveNum}…</span>`;
+    }
+
+    // Section 3: Variation moves
+    const varSANs    = state.variationMoves.map(function(m) { return m.san; });
+    const varActive  = state.variationMoves.length - 1; // last played variation move
+
+    for (let i = 0; i < varSANs.length; i++) {
+      const halfIdx = branchIdx + i; // logical half-move index in full game
+      if (i > 0 && halfIdx % 2 === 0) {
+        html += `<span class="move-num-cell">${Math.floor(halfIdx/2)+1}.</span>`;
+      }
+      html += `<span class="move-cell var-move${i === varActive ? ' active-move' : ''}" data-varidx="${i}" onclick="navigateToVariationMove(${i})">${varSANs[i]}</span>`;
+    }
+
+    // Section 4: Close bracket + return button
+    html += `<span class="var-close-bracket">)</span>`;
+    html += `<span class="var-return-btn" onclick="returnToMainLine()" title="Return to main PGN line"><i class="fas fa-arrow-left"></i> Main line</span>`;
+
+    // Section 5: Show the main-line moves that were NOT played (greyed)
+    if (branchIdx < mainSANs.length) {
+      html += `<span class="var-mainline-label">Main: </span>`;
+      for (let i = branchIdx; i < mainSANs.length; i++) {
+        if (i % 2 === 0 || i === branchIdx) {
+          const num = Math.floor(i/2)+1;
+          const prefix = (i === branchIdx && branchIsBlack) ? `${num}…` : (i % 2 === 0 ? `${num}.` : '');
+          if (prefix) html += `<span class="move-num-cell main-dim">${prefix}</span>`;
+        }
+        html += `<span class="move-cell main-dim" data-idx="${i}" onclick="navigateToMove(${i})">${mainSANs[i]}</span>`;
+      }
+    }
   }
 
   container.innerHTML = html;
@@ -349,8 +406,11 @@ function renderMoveList() {
  */
 window.navigateToMove = function(idx) {
   if (state.gameMoves.length > 0) {
-    // PGN replay mode
-    state.game = new Chess();
+    // PGN mode — clicking any main-line move exits variation and jumps there
+    state.inVariation    = false;
+    state.variationStart = 0;
+    state.variationMoves = [];
+    state.game           = new Chess();
     state.currentMoveIdx = 0;
     for (let i = 0; i <= idx; i++) {
       state.game.move(state.gameMoves[i]);
@@ -364,6 +424,26 @@ window.navigateToMove = function(idx) {
       state.game.move(hist[i]);
     }
   }
+  state.board.position(state.game.fen(), false);
+  updateAll();
+};
+
+/* Navigate to a specific move within the current variation (0-based index
+   into state.variationMoves). Exposed globally for onclick handlers. */
+window.navigateToVariationMove = function(varIdx) {
+  if (!state.inVariation) return;
+  // Rebuild: start fresh, replay main line up to branch, then replay variation to varIdx
+  const branchIdx = state.variationStart;
+  const allVarMoves = state.variationMoves.slice(0, varIdx + 1);
+
+  state.game = new Chess();
+  for (let i = 0; i < branchIdx; i++) {
+    state.game.move(state.gameMoves[i]);
+  }
+  for (let i = 0; i < allVarMoves.length; i++) {
+    state.game.move({ from: allVarMoves[i].from, to: allVarMoves[i].to, promotion: allVarMoves[i].promotion || 'q' });
+  }
+  // Keep variationMoves unchanged; update visual
   state.board.position(state.game.fen(), false);
   updateAll();
 };
@@ -644,6 +724,10 @@ function loadPGN(pgn) {
   state.game           = new Chess();
   state.currentMoveIdx = 0;
   state.engineLines    = [];
+  // Reset variation state on new game load
+  state.inVariation    = false;
+  state.variationStart = 0;
+  state.variationMoves = [];
   // Invalidate SAN cache so renderMoveList rebuilds for new game
   _cachedGameMovesRef  = null;
   _cachedGameMovesSANs = null;
@@ -1021,6 +1105,9 @@ function loadFEN(fen) {
   state.gameMoves      = [];
   state.currentMoveIdx = 0;
   state.engineLines    = [];
+  state.inVariation    = false;
+  state.variationStart = 0;
+  state.variationMoves = [];
 
   state.board.position(fen, false);
   updateAll();
@@ -1032,6 +1119,13 @@ function loadFEN(fen) {
    ===================================================== */
 function goNext() {
   if (state.gameMoves.length === 0) return; // free-play: no "next"
+
+  if (state.inVariation) {
+    // In variation: "next" means return to the main line at this point
+    // (variation has no forward navigation — user must play moves to extend it)
+    return;
+  }
+
   if (state.currentMoveIdx >= state.gameMoves.length) return;
   state.game.move(state.gameMoves[state.currentMoveIdx]);
   state.currentMoveIdx++;
@@ -1041,11 +1135,32 @@ function goNext() {
 
 function goPrev() {
   if (state.gameMoves.length > 0) {
+
+    if (state.inVariation) {
+      if (state.variationMoves.length > 0) {
+        // Undo one variation move
+        state.game.undo();
+        state.variationMoves.pop();
+      } else {
+        // All variation moves undone — exit variation mode and step back in main line
+        state.inVariation    = false;
+        state.variationStart = 0;
+        if (state.currentMoveIdx > 0) {
+          state.game.undo();
+          state.currentMoveIdx--;
+        }
+      }
+      state.board.position(state.game.fen(), false);
+      updateAll();
+      return;
+    }
+
     if (state.currentMoveIdx <= 0) return;
     state.game.undo();
     state.currentMoveIdx--;
     state.board.position(state.game.fen(), false);
     updateAll();
+
   } else {
     // Free-play undo
     if (state.game.history().length === 0) return;
@@ -1056,7 +1171,11 @@ function goPrev() {
 }
 
 function goFirst() {
-  if (state.currentMoveIdx === 0 && state.game.history().length === 0) return;
+  if (state.currentMoveIdx === 0 && state.game.history().length === 0 && !state.inVariation) return;
+  // Exit variation cleanly
+  state.inVariation    = false;
+  state.variationStart = 0;
+  state.variationMoves = [];
   state.game           = new Chess();
   state.currentMoveIdx = 0;
   state.board.position('start', false);
@@ -1065,6 +1184,12 @@ function goFirst() {
 
 function goLast() {
   if (state.gameMoves.length === 0) return;
+  // Exit any variation — go to end of MAIN line
+  state.inVariation    = false;
+  state.variationStart = 0;
+  state.variationMoves = [];
+  state.game           = new Chess();
+  state.currentMoveIdx = 0;
   while (state.currentMoveIdx < state.gameMoves.length) {
     state.game.move(state.gameMoves[state.currentMoveIdx]);
     state.currentMoveIdx++;
@@ -1072,6 +1197,20 @@ function goLast() {
   state.board.position(state.game.fen(), false);
   updateAll();
 }
+
+/* Return from a variation to the main-line branch point (exposed globally
+   so the notation's "← Main line" button can call it). */
+window.returnToMainLine = function() {
+  if (!state.inVariation) return;
+  // Undo all variation moves
+  for (var i = 0; i < state.variationMoves.length; i++) state.game.undo();
+  state.inVariation    = false;
+  state.variationStart = 0;
+  state.variationMoves = [];
+  state.board.position(state.game.fen(), false);
+  updateAll();
+  showToast('Returned to main line.', '');
+};
 
 /* =====================================================
    GUESS THE MOVE (training feedback)
@@ -2187,11 +2326,30 @@ function onDrop(source, target) {
 
   if (move === null) return 'snapback'; // illegal
 
-  // If we played a move in PGN replay mode, exit PGN mode
   if (state.gameMoves.length > 0) {
-    state.gameMoves      = [];
-    state.currentMoveIdx = 0;
+    // ── PGN is loaded — check if move follows the main line ──
+    const expected = state.gameMoves[state.currentMoveIdx];
+    const matchesMainLine = expected &&
+      move.from === expected.from && move.to === expected.to;
+
+    if (matchesMainLine && !state.inVariation) {
+      // Exact main-line continuation — advance as normal
+      state.currentMoveIdx++;
+
+    } else if (state.inVariation) {
+      // Already exploring a variation — append to it
+      state.variationMoves.push(move);
+
+    } else {
+      // ── Deviation: enter variation mode, preserve original PGN ──
+      state.inVariation    = true;
+      state.variationStart = state.currentMoveIdx;
+      state.variationMoves = [move];
+    }
+    // state.gameMoves is NEVER cleared — the original PGN always remains
+
   }
+  // else: no PGN loaded — pure free-play, nothing special needed
 
   updateAll();
 }
@@ -2230,6 +2388,9 @@ function bindControls() {
     state.gameMoves      = [];
     state.currentMoveIdx = 0;
     state.engineLines    = [];
+    state.inVariation    = false;
+    state.variationStart = 0;
+    state.variationMoves = [];
     state.board.start(false);
     resetEvalBar();
     const wrap = document.getElementById('engineLinesWrap');
@@ -2558,21 +2719,26 @@ const TS = {
 
 /* =====================================================
    v23 — CLICK-TO-MOVE STATE
+   Bug-fix (v24): _ptrMoved was set by hover pointermove (button NOT held),
+   so destination clicks were silently ignored. Fix: only track movement
+   while the pointer button is held (_ptrDown guard).
+   Second-click on legal destinations is now intercepted in the CAPTURE phase
+   BEFORE chessboard.js can start a new drag on the destination square.
    ===================================================== */
 const CM = {
   selectedSquare: null,   // currently selected square, e.g. 'e2'
   legalTargets:   [],     // array of destination squares from selection
-  _ptrMoved:      false,  // true once pointer moved >8px → was a drag, not a click
+  _ptrDown:       false,  // true while pointer button is held
+  _ptrMoved:      false,  // true once pointer moved >DRAG_THRESHOLD while held
   _ptrStartX:     0,
   _ptrStartY:     0,
-  DRAG_THRESHOLD: 8,      // px — below this delta it's a click; above it's a drag
+  DRAG_THRESHOLD: 10,     // px — generous threshold reduces false drag detection on mobile
   _bound:         false,  // guard — only bind events once even if board re-inits
 };
 
 /* Clear all click-to-move highlights and deselect the current piece.
-   Called from _tsShowPhase (phase change) and _tsHandleRetry (board revert). */
+   Called from _tsShowPhase, _tsHandleRetry, _tsEnd, orientation change. */
 function cmClearSelection() {
-  // Remove highlight classes from all squares
   document.querySelectorAll('.square-55d63.sq-selected').forEach(function(el) {
     el.classList.remove('sq-selected');
   });
@@ -2587,47 +2753,130 @@ function cmClearSelection() {
 }
 
 /* Bind pointer + click events to the #chessboard container (event delegation).
-   Safe to call multiple times — CM._bound guard prevents double-binding. */
+   Safe to call multiple times — CM._bound guard prevents double-binding.
+
+   TWO-PHASE STRATEGY:
+   • pointerdown (CAPTURE phase) — intercepts destination clicks BEFORE
+     chessboard.js can start dragging the destination piece. For legal targets
+     and same-square deselect, we call stopPropagation + preventDefault so
+     chessboard.js never sees the event.
+   • click (bubble phase) — handles first clicks (piece selection) only.
+     pointermove is only tracked while _ptrDown=true, so hovering the mouse
+     between the two clicks can never set _ptrMoved=true. */
 function initClickToMove() {
   const boardEl = document.getElementById('chessboard');
   if (!boardEl || CM._bound) return;
   CM._bound = true;
 
-  // Track pointer start so we can distinguish click from drag (8px threshold)
+  /* ── CAPTURE-PHASE pointerdown ──
+     Runs BEFORE chessboard.js's own handlers.
+     If there is a selected piece and the user touches a legal destination
+     or the same square: handle immediately and block all further propagation. */
   boardEl.addEventListener('pointerdown', function(e) {
+    // Always reset drag-tracking at the start of each press
+    CM._ptrDown   = true;
     CM._ptrMoved  = false;
     CM._ptrStartX = e.clientX;
     CM._ptrStartY = e.clientY;
+
+    if (CM.selectedSquare === null) return; // nothing selected — let chessboard.js handle normally
+
+    var sqEl = e.target.closest ? e.target.closest('.square-55d63') : null;
+    if (!sqEl) {
+      // Clicked outside a square while something is selected → deselect
+      cmClearSelection();
+      return;
+    }
+
+    var sq = sqEl.getAttribute('data-square');
+    if (!sq) return;
+
+    if (CM.legalTargets.indexOf(sq) !== -1) {
+      // ── Legal destination: intercept now, before chessboard.js ──
+      e.stopPropagation();
+      e.preventDefault(); // also suppresses the subsequent 'click' event
+      var _from = CM.selectedSquare;
+      cmClearSelection();
+      var result = onDrop(_from, sq);
+      if (result !== 'snapback') onSnapEnd();
+      return;
+    }
+
+    if (sq === CM.selectedSquare) {
+      // Tapped the selected square again → deselect
+      e.stopPropagation();
+      e.preventDefault();
+      cmClearSelection();
+      return;
+    }
+
+    // Other square (own piece for reselect, or non-target): let it through to click handler
+  }, true /* capture phase */);
+
+  /* ── Reset _ptrDown when pointer is released or cancelled ──
+     Must be on the document so it fires even if pointer left the board. */
+  document.addEventListener('pointerup', function() {
+    CM._ptrDown = false;
+  }, { passive: true });
+  document.addEventListener('pointercancel', function() {
+    CM._ptrDown  = false;
+    CM._ptrMoved = false;
   }, { passive: true });
 
+  /* ── pointermove: only track while button is HELD ──
+     This is the critical fix: without the _ptrDown guard, hovering the mouse
+     between the first and second click (while the button is NOT held) would
+     accumulate dx > threshold and set _ptrMoved=true, causing the destination
+     click to be silently ignored. */
   boardEl.addEventListener('pointermove', function(e) {
-    if (CM._ptrMoved) return;
+    if (!CM._ptrDown || CM._ptrMoved) return;
     var dx = e.clientX - CM._ptrStartX;
     var dy = e.clientY - CM._ptrStartY;
     if (Math.abs(dx) > CM.DRAG_THRESHOLD || Math.abs(dy) > CM.DRAG_THRESHOLD) {
       CM._ptrMoved = true;
-      cmClearSelection(); // started dragging → clear any click-selection visuals
+      cmClearSelection(); // user started dragging → clear click-selection visuals
     }
   }, { passive: true });
 
-  // Main click handler (fires AFTER pointerdown+up without significant movement)
+  /* ── click (bubble phase): handles FIRST clicks (piece selection) ──
+     Legal-target second clicks are handled by pointerdown capture above
+     (and preventDefault suppresses the subsequent click), so we only
+     reach here for: first clicks, reselects, and non-target deselects. */
   boardEl.addEventListener('click', function(e) {
-    if (CM._ptrMoved) return; // was a drag, ignore click event
+    if (CM._ptrMoved) return; // was a drag — ignore
 
-    // Find the square element from the click target (may be a child img/etc.)
     var sqEl = e.target.closest ? e.target.closest('.square-55d63') : null;
-    if (!sqEl) return;
+    if (!sqEl) { cmClearSelection(); return; }
     var sq = sqEl.getAttribute('data-square');
     if (!sq) return;
 
     if (CM.selectedSquare === null) {
+      // No selection → try to select this piece
       _cmHandleFirstClick(sq);
     } else {
-      _cmHandleSecondClick(sq);
+      // Something is selected, but the destination was NOT a legal target
+      // (those are handled in capture phase). So this is:
+      // • another own piece → reselect it
+      // • non-reachable square → deselect
+      var piece    = state.game ? state.game.get(sq) : null;
+      var myColor  = TS.active ? TS.side : (state.game ? state.game.turn() : null);
+      if (piece && myColor && piece.color === myColor) {
+        cmClearSelection();
+        _cmHandleFirstClick(sq); // reselect own piece
+      } else {
+        cmClearSelection();
+      }
     }
-  });
+  }, false /* bubble phase */);
 
-  // Escape key deselects
+  // Click outside the board deselects
+  document.addEventListener('click', function(e) {
+    if (CM.selectedSquare !== null && !(e.target.closest && e.target.closest('#chessboard'))) {
+      cmClearSelection();
+    }
+  }, { passive: true });
+
+  // Escape deselects
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') cmClearSelection();
   });
@@ -2639,84 +2888,34 @@ function _cmHandleFirstClick(sq) {
   var piece = state.game.get(sq);
   if (!piece) return; // empty square
 
-  // Determine the current player's colour
   var turn = state.game.turn(); // 'w' or 'b'
 
   if (TS.active) {
-    // Training mode: only allow clicks during waiting / retry phase, and only own pieces
     if (TS.phase !== 'waiting' && TS.phase !== 'retry') return;
     if (piece.color !== TS.side) return;
   } else {
-    // Normal / free-play mode: only the side to move
     if (piece.color !== turn) return;
   }
 
-  // Compute legal moves from this square
   var moves = state.game.moves({ square: sq, verbose: true });
-  if (!moves || moves.length === 0) return; // piece has no legal moves
+  if (!moves || moves.length === 0) return;
 
-  cmClearSelection(); // clear any previous selection first
+  cmClearSelection();
 
   CM.selectedSquare = sq;
   CM.legalTargets   = moves.map(function(m) { return m.to; });
 
-  // Highlight selected square
   var fromEl = document.querySelector('.square-55d63[data-square="' + sq + '"]');
   if (fromEl) fromEl.classList.add('sq-selected');
 
-  // Highlight every legal destination
   moves.forEach(function(m) {
     var destEl = document.querySelector('.square-55d63[data-square="' + m.to + '"]');
     if (!destEl) return;
-    // Capture: there's an enemy piece on the target square
-    var target = state.game.get(m.to);
-    var isCapture = (target && target.color !== piece.color) ||
-                    (m.flags && m.flags.indexOf('e') !== -1); // en passant flag
+    var targetPiece = state.game.get(m.to);
+    var isCapture   = (targetPiece && targetPiece.color !== piece.color) ||
+                      (m.flags && m.flags.indexOf('e') !== -1); // en passant
     destEl.classList.add(isCapture ? 'sq-legal-capture' : 'sq-legal-move');
   });
-}
-
-/* Second click — execute the move, reselect, or deselect. */
-function _cmHandleSecondClick(sq) {
-  var from = CM.selectedSquare;
-
-  // Clicked the same square → deselect
-  if (sq === from) {
-    cmClearSelection();
-    return;
-  }
-
-  // Check if clicking another own-colour piece (not a capture target)
-  var piece = state.game.get(sq);
-  var turn  = state.game.turn();
-  var myColor = TS.active ? TS.side : turn;
-
-  if (piece && piece.color === myColor && CM.legalTargets.indexOf(sq) === -1) {
-    // Own piece that isn't a legal capture target → reselect that piece instead
-    cmClearSelection();
-    _cmHandleFirstClick(sq);
-    return;
-  }
-
-  // If not a legal target, deselect
-  if (CM.legalTargets.indexOf(sq) === -1) {
-    cmClearSelection();
-    return;
-  }
-
-  // Clear highlights BEFORE calling onDrop so they don't linger
-  cmClearSelection();
-
-  // Delegate to the existing drop handler (handles training + normal + guess-the-move)
-  var result = onDrop(from, sq);
-
-  // If the move was rejected (result === 'snapback'), nothing to do — board unchanged
-  // If accepted, onDrop already called state.board.position() internally via updateAll()
-  // or _tsOnDrop(), so the visual is correct.
-  // Call onSnapEnd as a safety sync (matches the chessboard.js drag-drop flow)
-  if (result !== 'snapback') {
-    onSnapEnd();
-  }
 }
 
 /* =====================================================
