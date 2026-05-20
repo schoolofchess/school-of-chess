@@ -68,7 +68,7 @@ const CLASSIC_GAMES = [
     year: 1924, event: 'New York 1924',
     badge: 'Endgame Mastery',
     desc: 'Capablanca demonstrates flawless endgame technique, converting a tiny structural advantage into a full point.',
-    pgn: '[Event "New York 1924"]\n[White "Jose Raul Capablanca"]\n[Black "Savielly Tartakower"]\n[Date "1924"]\n[Result "1-0"]\n\n1. d4 e6 2. Nf3 f5 3. c4 Nf6 4. Bg5 Be7 5. Nc3 O-O 6. e3 b6 7. Bd3 Bb7 8. O-O Qe8 9. Qe2 Ne4 10. Bxe7 Qxe7 11. Bxe4 fxe4 12. Nd2 Bxg2 13. Kxg2 Qg5+ 14. Kh1 Qh4 15. Qg4 Qxg4 16. Nxg4 d5 17. cxd5 exd5 18. Nf6+ Rxf6 19. Ne4+ Kf7 20. Nxf6 Kxf6 21. Rac1 Re8 22. Rc7 Ra8 23. Rfc1 a5 24. Rxc6+ Ke7 25. Rxb6 Rd8 26. Rc5 Rxd4 27. Rxa5 Rxe4 28. Ra7+ Kd6 29. Rxg7 Re2 30. Rxh7 d4 31. Rbb7 d3 32. Rd7+ Kc6 33. Rdc7+ Kd6 34. Rd7+ Kc6 35. Rdc7+ Kd6 36. Rxd3+ 1-0'
+    pgn: '[Event "New York"]\n[Site "New York USA"]\n[Date "1924.03.24"]\n[Round "?"]\n[White "Capablanca, Jose Raul"]\n[Black "Tartakower, Savielly"]\n[Result "1-0"]\n[ECO "D16"]\n\n1. d4 d5 2. c4 e6 3. Nc3 Nf6 4. Bg5 Be7 5. e3 O-O 6. Nf3 Nbd7 7. Rc1 c6 8. Bd3 dxc4 9. Bxc4 Nd5 10. Bxe7 Qxe7 11. O-O Nxc3 12. Rxc3 e5 13. Qc2 exd4 14. exd4 Nb6 15. Re1 Qf6 16. Bd3 g6 17. Be4 Be6 18. b3 Rad8 19. Rc5 Nd7 20. Ra5 a6 21. h3 Rfe8 22. Qc1 Nf8 23. Rae5 Bd7 24. Qh6 Rxe5 25. dxe5 Qg7 26. Qh4 Re8 27. Bb1 Ne6 28. Rd1 Bc8 29. Ng5 Nxg5 30. Qxg5 Qxe5 31. Qxe5 Rxe5 32. Rd8+ Kg7 33. Rxc8 Re1+ 34. Kh2 Rxb1 35. Rc7 Rb2 36. Rxb7 Rxa2 37. Kg3 Ra3 38. Kf4 a5 39. Ke5 a4 40. bxa4 Rxa4 41. Rc7 Rc4 42. f4 Rc2 43. g4 h6 44. h4 Rc4 45. h5 gxh5 46. gxh5 Rc5+ 47. Ke4 Rxh5 48. Rxc6 Ra5 49. Kf3 h5 50. Kg3 f6 51. Kh4 Kg6 52. Rc8 Ra4 53. Rg8+ Kf5 54. Kxh5 Rxf4 55. Ra8 Rf1 56. Ra5+ Ke6 57. Kg4 f5+ 58. Kg3 Kf6 59. Kg2 Rf4 60. Kg3 Re4 61. Kf3 Kg5 62. Ra8 Rb4 63. Rg8+ Kf6 64. Ra8 Rb3+ 65. Kf4 Rb4+ 66. Kf3 Kg5 67. Rg8+ Kf6 68. Ra8 Ke5 69. Ra5+ Kf6 70. Ra6+ Kg5 71. Ra8 Rb3+ 72. Kf2 Kf4 73. Ra4+ Kg5 74. Rc4 f4 75. Rc8 Kg4 76. Rg8+ Kf5 77. Re8 Re3 78. Rxe3 fxe3+ 79. Kxe3 1-0'
   },
   {
     id: 'alekhine',
@@ -76,8 +76,8 @@ const CLASSIC_GAMES = [
     white: 'Alexander Alekhine', black: 'Aaron Nimzowitsch',
     year: 1930, event: 'San Remo 1930',
     badge: 'Strategic Genius',
-    desc: "Alekhine systematically outplays Nimzowitsch's solid defence with a powerful king-side pawn storm and tactical combinations.",
-    pgn: '[Event "San Remo"]\n[White "Alexander Alekhine"]\n[Black "Aaron Nimzowitsch"]\n[Date "1930"]\n[Result "1-0"]\n\n1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. Nf3 Bxc3+ 5. bxc3 d6 6. Qc2 Qe7 7. g3 O-O 8. Bg2 Nbd7 9. O-O e5 10. Ng5 Re8 11. Nxh7 Nxh7 12. dxe5 Nxe5 13. Bxb7 Bxb7 14. Qxh7+ Kf8 15. Bg5 Qd7 16. Bf6 Re6 17. c5 Nf3+ 18. Kg2 Qd8 19. Qh8+ Ke7 20. Bxd8# 1-0'
+    desc: "Nimzowitsch outplays Alekhine with a profound positional pawn sacrifice, converting a structural advantage into a brilliant queen-side attack.",
+    pgn: '[Event "San Remo"]\n[Site "San Remo ITA"]\n[Date "1930.02.??"]\n[Round "?"]\n[White "Alekhine, Alexander"]\n[Black "Nimzowitsch, Aron"]\n[Result "0-1"]\n[ECO "A50"]\n\n1. d4 Nf6 2. c4 e6 3. Nc3 Bb4 4. e3 O-O 5. Bd3 d5 6. Nf3 c5 7. O-O Nc6 8. a3 Bxc3 9. bxc3 dxc4 10. Bxc4 Qc7 11. Bd3 e5 12. Nd2 Rd8 13. Bb2 b6 14. Rc1 Bb7 15. f4 exd4 16. cxd4 Qe7 17. Qe2 cxd4 18. e4 Rac8 19. e5 Nd5 20. Ne4 Ne3 21. Rf3 Na5 22. Rh3 Rxc1+ 23. Bxc1 Rc8 24. Bxe3 dxe3 25. Nf6+ gxf6 26. Bxh7+ Kf8 27. Qg4 Rc1+ 28. Qd1 Rxd1# 0-1'
   },
   {
     id: 'morphy-paulsen',
