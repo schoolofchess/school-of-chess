@@ -395,9 +395,36 @@ function renderMoveList() {
 
   container.innerHTML = html;
 
-  // Auto-scroll active move into view
+  // Auto-scroll active move into view — scroll ONLY the notation panel,
+  // never the whole page (fixes mobile board jumping on every move).
   const active = container.querySelector('.active-move');
-  if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (active) {
+    const scrollEl = document.getElementById('moveListScroll');
+    if (scrollEl) {
+      // Container-relative scroll: keeps board completely stable on mobile
+      const elTop    = active.offsetTop;
+      const elBottom = elTop + active.offsetHeight;
+      const scrollTop    = scrollEl.scrollTop;
+      const scrollBottom = scrollTop + scrollEl.clientHeight;
+      if (elBottom > scrollBottom) {
+        scrollEl.scrollTop = elBottom - scrollEl.clientHeight + 8;
+      } else if (elTop < scrollTop) {
+        scrollEl.scrollTop = elTop - 8;
+      }
+    } else {
+      // Fallback for desktop: only scroll if element is already in a
+      // scrollable ancestor (not the viewport root), so the page won't jump.
+      const scrollParent = (function(el) {
+        let n = el.parentElement;
+        while (n) {
+          if (n.scrollHeight > n.clientHeight && getComputedStyle(n).overflowY !== 'visible') return n;
+          n = n.parentElement;
+        }
+        return null;
+      })(active);
+      if (scrollParent) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
 }
 
 /**

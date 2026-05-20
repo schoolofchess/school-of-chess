@@ -1173,6 +1173,11 @@ kbd {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    /* Prevent this scroll container from propagating scroll to the page —
+       critical on iOS/Android so notation scroll never moves the board */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding: 0.4rem 0.65rem;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.1) transparent;
