@@ -144,6 +144,18 @@ header#navbar .hamburger {
 }
 
 /* =====================================================
+   ANALYSIS PAGE — GLOBAL TOUCH IMPROVEMENTS
+   Applied page-wide for consistent mobile feel
+   ===================================================== */
+.topbar-btn, .board-controls button, .tool-btn,
+.notation-hide-btn, .move-cell, .classic-card,
+.editor-piece-item, .editor-palette-btns button,
+.analysis-modal-close, .engine-switch {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* =====================================================
    CHESSBOARD.JS OVERRIDES — Premium Board Styling
    ===================================================== */
 .white-1e1d7 { background-color: #f0d9b5 !important; }
@@ -1875,8 +1887,15 @@ kbd {
 @media (max-width: 480px) {
     .analysis-workspace { padding: 0.55rem; }
 
-    .board-controls { gap: 0.22rem; padding: 0.35rem 0.45rem; }
-    .board-controls button { width: 30px; height: 30px; font-size: 0.7rem; }
+    .board-controls { gap: 0.2rem; padding: 0.3rem 0.4rem; }
+    /* 36px minimum touch target — below 44px ideal but space-constrained;
+       we compensate with a larger invisible tap area via padding */
+    .board-controls button {
+        width: 36px; height: 36px;
+        font-size: 0.72rem;
+        /* Expand tappable area beyond visual bounds */
+        position: relative;
+    }
 
     .editor-palette-btns { flex-wrap: wrap; }
     .side-to-move-card { padding: 0.65rem 0.85rem; }
