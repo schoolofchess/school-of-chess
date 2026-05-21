@@ -1825,3 +1825,213 @@ img[loading="lazy"].loaded {
     }
     * { animation-duration: 0.01ms !important; }
 }
+
+/* ============================================================
+   PREMIUM ENHANCEMENT LAYER — v29
+   Contact Section: cinematic dark premium design
+   Analysis Board: responsive sizing + piece animations
+   All existing content, data and functionality preserved.
+   ============================================================ */
+
+/* ── ENQUIRY SECTION — Dark Glassmorphism Transformation ── */
+.enquiry-section {
+    background: linear-gradient(160deg, #080e1c 0%, #0c1628 45%, #0f1d38 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ambient radial glows */
+.enquiry-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 80% 70% at 15% 60%, rgba(37,99,235,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 20%, rgba(245,158,11,0.05) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 50% 100%, rgba(37,99,235,0.06) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Top border glow line */
+.enquiry-section > .container { position: relative; z-index: 1; }
+
+/* Section header text — white on dark */
+.enquiry-section .section-title {
+    color: #ffffff;
+    -webkit-text-fill-color: #ffffff;
+}
+.enquiry-section .section-desc {
+    color: rgba(255,255,255,0.48);
+}
+.enquiry-section .section-label {
+    background: linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ── Left info panel — premium glass card ── */
+.enquiry-info {
+    background: rgba(255,255,255,0.035);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 22px;
+    padding: 2.35rem;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.06),
+        inset 0 0 0 1px rgba(37,99,235,0.05),
+        0 24px 60px rgba(0,0,0,0.35),
+        0 6px 20px rgba(0,0,0,0.18);
+    position: relative;
+    transition: box-shadow 0.4s ease;
+}
+/* Top accent border on info panel */
+.enquiry-info::before {
+    content: '';
+    position: absolute;
+    inset-x: 0; top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 5%, rgba(37,99,235,0.55) 40%, rgba(245,158,11,0.45) 70%, transparent 95%);
+    border-radius: 22px 22px 0 0;
+    pointer-events: none;
+}
+
+/* Heading */
+.enquiry-info h3 {
+    color: #fff;
+    font-size: 1.42rem;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.55rem;
+}
+
+/* Trial benefits */
+.enquiry-section .trial-benefits {
+    margin-bottom: 2rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.enquiry-section .trial-benefits li {
+    color: rgba(255,255,255,0.68);
+    font-size: 0.91rem;
+}
+.enquiry-section .trial-benefits li i {
+    color: #34d399;
+    font-size: 0.82rem;
+    filter: drop-shadow(0 0 5px rgba(52,211,153,0.5));
+}
+
+/* Contact details label */
+.enquiry-section .contact-details h4 {
+    font-family: var(--font-body);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.32);
+    margin-bottom: 1rem;
+}
+
+/* Contact links — dark reimagined */
+.enquiry-section .contact-link {
+    background: rgba(255,255,255,0.04) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+    color: rgba(255,255,255,0.72) !important;
+    border-radius: 13px;
+    transition:
+        background 0.2s cubic-bezier(0.4,0,0.2,1),
+        border-color 0.2s cubic-bezier(0.4,0,0.2,1),
+        color 0.2s cubic-bezier(0.4,0,0.2,1),
+        transform 0.22s cubic-bezier(0.34,1.20,0.64,1),
+        box-shadow 0.2s ease;
+}
+.enquiry-section .contact-link:hover {
+    background: rgba(255,255,255,0.08) !important;
+    border-color: rgba(37,99,235,0.35) !important;
+    color: #fff !important;
+    transform: translateX(4px) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+.enquiry-section .contact-link i {
+    color: rgba(255,255,255,0.42) !important;
+}
+/* WhatsApp link override */
+.enquiry-section .whatsapp-link {
+    background: rgba(37,211,102,0.07) !important;
+    border-color: rgba(37,211,102,0.18) !important;
+    color: #4ade80 !important;
+}
+.enquiry-section .whatsapp-link:hover {
+    background: rgba(37,211,102,0.13) !important;
+    border-color: rgba(37,211,102,0.38) !important;
+    color: #86efac !important;
+    box-shadow: 0 4px 20px rgba(37,211,102,0.12);
+}
+.enquiry-section .whatsapp-link i { color: #4ade80 !important; }
+
+/* Map embed — dark frame */
+.enquiry-section .map-embed {
+    margin-top: 1.5rem;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+.enquiry-section .map-embed iframe {
+    border-radius: 0 !important;
+    filter: brightness(0.82) contrast(1.05) saturate(0.85);
+    transition: filter 0.3s ease;
+}
+.enquiry-section .map-embed:hover iframe {
+    filter: brightness(0.92) contrast(1.02) saturate(0.9);
+}
+.enquiry-section .map-directions-btn {
+    color: #60a5fa !important;
+    font-size: 0.83rem;
+    margin-top: 0.85rem;
+}
+.enquiry-section .map-directions-btn:hover {
+    color: #93c5fd !important;
+}
+
+/* ── Google Form wrapper — glass panel ── */
+.enquiry-section .gform-wrap {
+    background: rgba(255,255,255,0.025) !important;
+    border: 1px solid rgba(255,255,255,0.09) !important;
+    border-radius: 22px;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        0 24px 64px rgba(0,0,0,0.32),
+        0 6px 18px rgba(0,0,0,0.18);
+    overflow: hidden;
+    position: relative;
+}
+/* Gold/blue gradient top edge on form panel */
+.enquiry-section .gform-wrap::before {
+    content: '';
+    position: absolute;
+    inset-x: 0; top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 5%, rgba(245,158,11,0.55) 40%, rgba(37,99,235,0.5) 70%, transparent 95%);
+    z-index: 1;
+    pointer-events: none;
+}
+.enquiry-section .gform-wrap iframe {
+    border-radius: 0 !important;
+    display: block;
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 768px) {
+    .enquiry-info {
+        padding: 1.75rem;
+        border-radius: 18px;
+    }
+    .enquiry-section .gform-wrap {
+        border-radius: 18px;
+    }
+}
+@media (max-width: 480px) {
+    .enquiry-info { padding: 1.4rem 1.25rem; }
+}

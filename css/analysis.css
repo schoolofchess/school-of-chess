@@ -4096,3 +4096,220 @@ html { overflow-x: hidden; }
     .analysis-workspace { grid-template-columns: 1fr; }
     .board-card { box-shadow: none; border: 1px solid #ccc; }
 }
+
+/* ============================================================
+   PREMIUM ENHANCEMENT LAYER — v29
+   Analysis Board: cinematic motion, premium highlights,
+   responsive board sizing, immersive depth.
+   All chess logic and functionality preserved exactly.
+   ============================================================ */
+
+/* ── Board card — deeper premium glow on hover ── */
+.board-card {
+    transition:
+        box-shadow 0.4s cubic-bezier(0.4,0,0.2,1),
+        border-color 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.07);
+}
+.board-card:hover {
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.10),
+        0 8px 32px rgba(0,0,0,0.45),
+        0 24px 80px rgba(0,0,0,0.60),
+        0 0 60px rgba(37,99,235,0.07);
+}
+
+/* ── Chess square hover — premium subtle glow ── */
+.square-55d63 {
+    transition: background-color 0.12s ease !important;
+}
+.square-55d63:hover {
+    /* Subtle inner glow on hover without disrupting piece rendering */
+    filter: brightness(1.06);
+}
+
+/* ── Last move highlight — richer gold shimmer ── */
+.highlight1-32417 {
+    box-shadow: inset 0 0 0 4px rgba(245,158,11,0.90) !important;
+    background: rgba(245,158,11,0.14) !important;
+    transition: box-shadow 0.15s ease !important;
+}
+.highlight2-9c5d2 {
+    box-shadow: inset 0 0 0 4px rgba(37,99,235,0.90) !important;
+    background: rgba(37,99,235,0.12) !important;
+    transition: box-shadow 0.15s ease !important;
+}
+
+/* ── Piece drag — cinematic lift with glow ── */
+body > img.piece-417db {
+    filter: drop-shadow(0 6px 20px rgba(0,0,0,0.65)) brightness(1.08) !important;
+    transition: none !important;
+}
+
+/* ── Piece on board — smoother hover lift ── */
+#chessboard .piece-417db:hover {
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.60)) brightness(1.06) !important;
+    cursor: grab !important;
+}
+
+/* ── Board corner glow — ambient depth ── */
+#chessboard::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 4px;
+    box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.04),
+        inset 0 0 40px rgba(0,0,0,0.15);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* ── Eval bar — smoother fill animation ── */
+.eval-black-fill,
+.eval-white-fill {
+    transition: height 0.55s cubic-bezier(0.4,0,0.2,1) !important;
+    will-change: height;
+}
+
+/* ── Active move in notation — enhanced pulse ── */
+.move-cell.active-move {
+    background: linear-gradient(135deg, rgba(37,99,235,0.9) 0%, rgba(59,130,246,0.85) 100%) !important;
+    box-shadow:
+        0 0 0 2px rgba(37,99,235,0.25),
+        0 2px 10px rgba(37,99,235,0.25),
+        inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    animation: moveHighlight 0.28s cubic-bezier(0.34,1.20,0.64,1);
+}
+@keyframes moveHighlight {
+    from { transform: scale(0.94); opacity: 0.7; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+/* ── Board status bar — more premium ── */
+.board-status {
+    background: rgba(245,158,11,0.06) !important;
+    border-color: rgba(245,158,11,0.12) !important;
+    letter-spacing: 0.02em;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* ── Classic game cards — elevated hover ── */
+.classic-card:hover {
+    box-shadow:
+        0 24px 56px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(255,255,255,0.12);
+}
+
+/* ── Board controls — spring hover ── */
+.board-controls button:hover {
+    transform: translateY(-2px) scale(1.06) !important;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.28) !important;
+}
+.board-controls button:active {
+    transform: translateY(0) scale(0.94) !important;
+}
+
+/* ── Tool buttons — better gold active state ── */
+.tool-btn-gold {
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.tool-btn-gold:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 20px rgba(245,158,11,0.15), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* ── Topbar buttons — premium glass ── */
+.topbar-btn {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── Board responsive — better ultrawide sizing ── */
+@media (min-width: 1600px) {
+    .analysis-workspace {
+        grid-template-columns: 22px 1fr 320px;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+    }
+}
+@media (min-width: 1920px) {
+    .analysis-workspace {
+        grid-template-columns: 24px 1fr 340px;
+        max-width: 1600px;
+    }
+}
+
+/* ── Board mobile — pixel-perfect fit ── */
+@media (max-width: 768px) {
+    /* Board fills full available width minus padding — no overflow */
+    .board-card {
+        padding: 6px;
+        border-radius: 12px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    #chessboard {
+        width: 100% !important;  /* JS still overrides with measured px value */
+        max-width: calc(100vw - 2.5rem);
+    }
+    /* Right panel — more compact on mobile */
+    .engine-card { padding: 0.65rem 0.85rem; }
+    .notation-card { border-radius: 10px; }
+    .tools-card { border-radius: 10px; }
+    .side-to-move-card { border-radius: 10px; }
+}
+
+/* ── Piece move flash — smoother correct/wrong ── */
+@keyframes flash-correct {
+    0%   { box-shadow: none; }
+    25%  { box-shadow: inset 0 0 0 4px rgba(34,197,94,0.75), 0 0 20px rgba(34,197,94,0.3); }
+    75%  { box-shadow: inset 0 0 0 4px rgba(34,197,94,0.55), 0 0 12px rgba(34,197,94,0.2); }
+    100% { box-shadow: none; }
+}
+@keyframes flash-wrong {
+    0%   { box-shadow: none; }
+    25%  { box-shadow: inset 0 0 0 4px rgba(239,68,68,0.75),  0 0 20px rgba(239,68,68,0.3); }
+    75%  { box-shadow: inset 0 0 0 4px rgba(239,68,68,0.50),  0 0 10px rgba(239,68,68,0.2); }
+    100% { box-shadow: none; }
+}
+
+/* ── Analysis page — ambient glow behind board ── */
+.analysis-workspace-outer {
+    background: radial-gradient(ellipse 70% 50% at 35% 50%, rgba(37,99,235,0.04) 0%, transparent 60%),
+                #0d1117;
+}
+
+/* ── Classic games section — better separator ── */
+.classic-games-section {
+    border-top: 1px solid rgba(255,255,255,0.05);
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,0.05) 0%, transparent 60%),
+        linear-gradient(180deg, #111827 0%, #0d1117 100%) !important;
+}
+
+/* ── Modal — spring entry animation ── */
+.analysis-modal {
+    animation: modalSpringIn 0.32s cubic-bezier(0.34,1.18,0.64,1) !important;
+}
+@keyframes modalSpringIn {
+    from { opacity: 0; transform: scale(0.93) translateY(14px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+/* ── Toast — more premium ── */
+.analysis-toast {
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    background: rgba(15,23,42,0.92) !important;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+    .move-cell.active-move { animation: none !important; }
+    .analysis-modal        { animation: none !important; }
+    .eval-black-fill,
+    .eval-white-fill       { transition: none !important; }
+    .flash-correct,
+    .flash-wrong           { animation: none !important; }
+}
