@@ -1471,3 +1471,357 @@ h1, h2, h3, h4, h5 {
     /* Section headers */
     .section-header { margin-bottom: 2rem; }
 }
+
+/* ============================================================
+   PREMIUM ENHANCEMENT LAYER — v28
+   Visual polish, motion quality, interaction depth
+   All content and functionality preserved exactly.
+   ============================================================ */
+
+/* ── Scroll reveal — add blur for cinematic feel ─────────────── */
+.fade-up {
+    filter: blur(4px);
+}
+.fade-up.visible {
+    filter: blur(0);
+}
+
+/* Stagger delays for card grids — cascades naturally */
+.programs-grid   .program-card:nth-child(1),
+.why-grid        .why-card:nth-child(1),
+.reviews-grid    .review-card:nth-child(1)  { transition-delay: 0.04s; }
+
+.programs-grid   .program-card:nth-child(2),
+.why-grid        .why-card:nth-child(2),
+.reviews-grid    .review-card:nth-child(2)  { transition-delay: 0.10s; }
+
+.programs-grid   .program-card:nth-child(3),
+.why-grid        .why-card:nth-child(3),
+.reviews-grid    .review-card:nth-child(3)  { transition-delay: 0.16s; }
+
+.programs-grid   .program-card:nth-child(4),
+.why-grid        .why-card:nth-child(4),
+.reviews-grid    .review-card:nth-child(4)  { transition-delay: 0.22s; }
+
+.programs-grid   .program-card:nth-child(5),
+.why-grid        .why-card:nth-child(5)     { transition-delay: 0.28s; }
+
+.programs-grid   .program-card:nth-child(6),
+.why-grid        .why-card:nth-child(6)     { transition-delay: 0.34s; }
+
+.why-grid        .why-card:nth-child(7)     { transition-delay: 0.40s; }
+.why-grid        .why-card:nth-child(8)     { transition-delay: 0.46s; }
+.why-grid        .why-card:nth-child(9)     { transition-delay: 0.52s; }
+.why-grid        .why-card:nth-child(10)    { transition-delay: 0.58s; }
+
+.philosophy-grid .philosophy-item:nth-child(2) { transition-delay: 0.07s; }
+.philosophy-grid .philosophy-item:nth-child(3) { transition-delay: 0.14s; }
+.philosophy-grid .philosophy-item:nth-child(4) { transition-delay: 0.21s; }
+.philosophy-grid .philosophy-item:nth-child(5) { transition-delay: 0.28s; }
+.philosophy-grid .philosophy-item:nth-child(6) { transition-delay: 0.35s; }
+.philosophy-grid .philosophy-item:nth-child(7) { transition-delay: 0.42s; }
+.philosophy-grid .philosophy-item:nth-child(8) { transition-delay: 0.49s; }
+
+/* ── Section labels — premium gradient accent ─────────────────── */
+.section-label {
+    background: linear-gradient(90deg, var(--accent) 0%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+}
+
+/* ── Hero — richer depth and glow ─────────────────────────────── */
+.hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 160px;
+    background: linear-gradient(to top, #ffffff 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.hero-badge {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-color: rgba(37,99,235,0.36);
+    box-shadow: 0 0 0 1px rgba(37,99,235,0.12) inset, 0 2px 12px rgba(37,99,235,0.12);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.hero-badge:hover {
+    border-color: rgba(37,99,235,0.5);
+    box-shadow: 0 0 0 1px rgba(37,99,235,0.18) inset, 0 4px 20px rgba(37,99,235,0.18);
+}
+
+/* ── Section headers — fade-in from below ─────────────────────── */
+.section-header.fade-up {
+    transform: translateY(16px);
+}
+
+/* ── Program cards — richer hover with inner glow ─────────────── */
+.program-card:hover {
+    box-shadow:
+        0 0 0 1px rgba(37,99,235,0.12) inset,
+        0 8px 32px rgba(37,99,235,0.18),
+        0 2px 8px rgba(37,99,235,0.10);
+}
+
+.program-icon {
+    transition: transform 0.3s cubic-bezier(0.34,1.30,0.64,1);
+}
+.program-card:hover .program-icon {
+    transform: scale(1.12) rotate(8deg);
+}
+
+/* ── Why cards — better icon animation ───────────────────────── */
+.why-card:hover .why-icon {
+    background: linear-gradient(135deg, rgba(37,99,235,0.15), rgba(37,99,235,0.25));
+    transform: scale(1.08);
+    transition: background 0.25s ease, transform 0.3s cubic-bezier(0.34,1.30,0.64,1);
+}
+.why-icon {
+    transition: background 0.25s ease, transform 0.3s cubic-bezier(0.34,1.30,0.64,1);
+}
+
+/* ── Review cards — more premium quote and featured ──────────── */
+.review-text::before {
+    content: '\201C';
+    font-family: var(--font-heading);
+    font-size: 3.5rem;
+    color: rgba(37,99,235,0.12);
+    line-height: 0;
+    vertical-align: -1rem;
+    margin-right: 0.15rem;
+    display: inline-block;
+}
+
+.review-card-featured {
+    background: linear-gradient(145deg, #fff 0%, #f0f6ff 100%);
+    border-color: rgba(37,99,235,0.22);
+    position: relative;
+    overflow: hidden;
+}
+.review-card-featured::before {
+    content: '♛';
+    position: absolute;
+    top: -0.75rem;
+    right: 1.25rem;
+    font-size: 5rem;
+    color: rgba(37,99,235,0.04);
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
+}
+
+/* ── Philosophy — left border flash on hover ─────────────────── */
+.philosophy-item {
+    position: relative;
+    border-left: 3px solid transparent;
+    transition: background var(--ease), border-color 0.2s ease;
+}
+.philosophy-item:hover {
+    background: var(--light-2);
+    border-left-color: var(--accent);
+}
+.philosophy-item:hover .philosophy-num {
+    color: rgba(37,99,235,0.25);
+    transition: color 0.25s ease;
+}
+
+/* ── FAQ — smoother answer reveal + better open state ────────── */
+.faq-item {
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.faq-answer {
+    transition: max-height 0.42s cubic-bezier(0.4,0,0.2,1),
+                opacity 0.3s ease,
+                padding 0.25s ease;
+    opacity: 0;
+}
+.faq-item.open .faq-answer {
+    opacity: 1;
+}
+
+/* ── Achievement images — enhanced zoom + overlay ────────────── */
+.achievement-card {
+    position: relative;
+    overflow: hidden;
+}
+.achievement-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(13,27,52,0.35) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.achievement-card:hover::after {
+    opacity: 1;
+}
+
+/* ── FIDE pills — micro-animation on card hover ──────────────── */
+.fide-card:hover .fide-rating-pill {
+    transform: translateY(-2px);
+    transition: transform 0.25s cubic-bezier(0.34,1.30,0.64,1);
+}
+.fide-card:hover .fide-pill-gold {
+    box-shadow: 0 0 18px rgba(245,158,11,0.28);
+}
+
+/* ── Credentials — hover lift ────────────────────────────────── */
+.credential {
+    transition: transform 0.25s cubic-bezier(0.34,1.30,0.64,1),
+                box-shadow 0.22s ease,
+                border-color 0.2s ease;
+}
+.credential:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(37,99,235,0.12);
+    border-color: rgba(37,99,235,0.25);
+}
+
+/* ── About highlight — pulsing accent bar ────────────────────── */
+.about-highlight {
+    position: relative;
+    overflow: hidden;
+}
+.about-highlight::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--accent), #60a5fa);
+    box-shadow: 0 0 8px rgba(37,99,235,0.4);
+}
+
+/* ── Stats strip — number glow ───────────────────────────────── */
+.strip-num, .strip-plus {
+    text-shadow: 0 0 32px rgba(255,255,255,0.12);
+}
+.strip-stat:hover .strip-num {
+    text-shadow: 0 0 24px rgba(251,191,36,0.4);
+    transition: text-shadow 0.3s ease;
+}
+
+/* ── Buttons — enhanced micro-interactions ───────────────────── */
+.btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, transparent 60%);
+    pointer-events: none;
+}
+.btn { position: relative; overflow: hidden; }
+
+/* Ripple-free shimmer sweep on primary btn */
+.btn-primary {
+    box-shadow: 0 2px 8px rgba(37,99,235,0.18);
+}
+.btn-primary:hover {
+    box-shadow: 0 6px 24px rgba(37,99,235,0.32), 0 2px 8px rgba(37,99,235,0.18);
+}
+
+/* ── Footer links — smooth translate ─────────────────────────── */
+.footer-links a,
+.footer-programs a {
+    transition: color 0.18s ease, transform 0.2s cubic-bezier(0.34,1.30,0.64,1), padding-left 0.2s ease;
+}
+.footer-links a:hover,
+.footer-programs a:hover {
+    transform: translateX(4px);
+    padding-left: 0px; /* override the old rule cleanly */
+}
+
+/* ── Scroll hint — better bounce ─────────────────────────────── */
+.hero-scroll-hint i {
+    display: block;
+    animation: scrollBounce 1.8s cubic-bezier(0.45,0,0.55,1) infinite;
+}
+@keyframes scrollBounce {
+    0%, 100% { transform: translateY(0);    opacity: 0.5; }
+    50%       { transform: translateY(8px); opacity: 1;   }
+}
+
+/* ── Section-to-section visual separators ─────────────────────── */
+.about-section,
+.why-section,
+.faq-section,
+.enquiry-section,
+.philosophy-section {
+    position: relative;
+}
+.about-section::after,
+.why-section::after,
+.philosophy-section::after,
+.faq-section::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.07), transparent);
+}
+
+/* ── Focus styles — better accessibility ring ────────────────── */
+:focus-visible {
+    outline: 2px solid rgba(37,99,235,0.6);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+/* ── Blog preview cards — polished hover ─────────────────────── */
+.blog-preview-card {
+    transition: transform 0.28s cubic-bezier(0.34,1.30,0.64,1),
+                box-shadow 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.blog-preview-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.14);
+}
+.blog-preview-card:hover .preview-card-img {
+    filter: brightness(1.07);
+}
+.preview-card-img {
+    transition: filter 0.3s ease;
+}
+
+/* ── Selection highlight ──────────────────────────────────────── */
+::selection {
+    background: rgba(37,99,235,0.18);
+    color: var(--dark);
+}
+
+/* ── Smooth image load ────────────────────────────────────────── */
+img {
+    transition: opacity 0.4s ease;
+}
+img[loading="lazy"] {
+    opacity: 0;
+}
+img[loading="lazy"].loaded {
+    opacity: 1;
+}
+
+/* ── Mobile enhancement patches ──────────────────────────────── */
+@media (max-width: 768px) {
+    /* Don't stagger too long on mobile — feels slow */
+    .programs-grid .program-card:nth-child(n),
+    .why-grid      .why-card:nth-child(n) {
+        transition-delay: 0.04s;
+    }
+    /* Remove hover effects that don't apply on touch */
+    .hero::after { height: 80px; }
+}
+
+/* ── Reduced-motion respect ──────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .fade-up,
+    .fade-up.visible {
+        transition: opacity 0.3s ease !important;
+        filter: none !important;
+        transform: none !important;
+    }
+    * { animation-duration: 0.01ms !important; }
+}

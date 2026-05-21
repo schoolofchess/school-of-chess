@@ -47,7 +47,8 @@
     }
 
     /* ===== SCROLL-REVEAL ANIMATIONS ===== */
-    var animatedSelectors = [
+    /* Elements that get individual stagger via CSS nth-child delays */
+    var staggeredSelectors = [
         '.program-card',
         '.why-card',
         '.philosophy-item',
@@ -55,31 +56,64 @@
         '.achievement-card',
         '.credential',
         '.about-highlight',
-        '.fide-highlight'
+        '.fide-highlight',
+        '.blog-preview-card',
+        '.faq-item',
     ].join(', ');
 
-    var animatedEls = document.querySelectorAll(animatedSelectors);
+    /* Elements that reveal as a single unit */
+    var singleSelectors = [
+        '.section-header',
+        '.about-text',
+        '.about-subtitle',
+        '.achievement-col-header',
+        '.achievement-actions',
+        '.programs-cta',
+        '.blog-section-cta',
+        '.fide-ratings-bar',
+        '.enquiry-info h3',
+        '.trial-benefits',
+        '.contact-details',
+        '.map-embed',
+    ].join(', ');
 
-    animatedEls.forEach(function (el) {
+    var allAnimated = document.querySelectorAll(staggeredSelectors + ', ' + singleSelectors);
+
+    allAnimated.forEach(function (el) {
         el.classList.add('fade-up');
     });
 
     if ('IntersectionObserver' in window) {
+        /* Group elements by their parent so stagger is per-visible-group not global */
         var revealObserver = new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry, idx) {
-                if (entry.isIntersecting) {
-                    setTimeout(function () {
-                        entry.target.classList.add('visible');
-                    }, idx * 60);
-                    revealObserver.unobserve(entry.target);
-                }
+            /* Bucket entries by their parent grid/container for in-group stagger */
+            var parentMap = {};
+            entries.forEach(function (entry) {
+                if (!entry.isIntersecting) return;
+                var parentKey = entry.target.parentElement
+                    ? (entry.target.parentElement.className || 'root')
+                    : 'root';
+                if (!parentMap[parentKey]) parentMap[parentKey] = [];
+                parentMap[parentKey].push(entry.target);
             });
-        }, { threshold: 0.1, rootMargin: '0px 0px -48px 0px' });
 
-        animatedEls.forEach(function (el) { revealObserver.observe(el); });
+            Object.values(parentMap).forEach(function (group) {
+                group.forEach(function (el, idx) {
+                    /* Single elements reveal immediately; staggered elements get per-group delay */
+                    var isStaggered = el.matches(staggeredSelectors);
+                    var delay = isStaggered ? idx * 65 : 0;
+                    setTimeout(function () {
+                        el.classList.add('visible');
+                    }, delay);
+                    revealObserver.unobserve(el);
+                });
+            });
+        }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+        allAnimated.forEach(function (el) { revealObserver.observe(el); });
     } else {
         /* Fallback for older browsers */
-        animatedEls.forEach(function (el) { el.classList.add('visible'); });
+        allAnimated.forEach(function (el) { el.classList.add('visible'); });
     }
 
     /* ===== ENQUIRY FORM — submit handler ===== */
@@ -175,36 +209,57 @@
         });
     });
 
-    /* ===== COUNTER ANIMATION (Stats Strip) ===== */
+    /* ===== COUNTER ANIMATION — easeOut curve (Stats Strip) ===== */
     var counters = document.querySelectorAll('.strip-num[data-target]');
     var counterStarted = false;
+
+    function easeOutQuart(t) {
+        return 1 - Math.pow(1 - t, 4);
+    }
+
+    function animateCounter(counter, target, duration) {
+        var startTime = null;
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            var elapsed  = timestamp - startTime;
+            var progress = Math.min(elapsed / duration, 1);
+            var eased    = easeOutQuart(progress);
+            counter.textContent = Math.floor(eased * target);
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                counter.textContent = target;
+            }
+        }
+        requestAnimationFrame(step);
+    }
 
     function animateCounters() {
         if (counterStarted) return;
         var strip = document.querySelector('.stats-strip');
         if (!strip) return;
         var rect = strip.getBoundingClientRect();
-        if (rect.top < window.innerHeight - 100) {
+        if (rect.top < window.innerHeight - 80) {
             counterStarted = true;
             counters.forEach(function (counter) {
                 var target = parseInt(counter.getAttribute('data-target'));
-                var duration = 1800;
-                var step = target / (duration / 16);
-                var current = 0;
-                var timer = setInterval(function () {
-                    current += step;
-                    if (current >= target) {
-                        counter.textContent = target;
-                        clearInterval(timer);
-                    } else {
-                        counter.textContent = Math.floor(current);
-                    }
-                }, 16);
+                animateCounter(counter, target, 1600);
             });
         }
     }
     window.addEventListener('scroll', animateCounters, { passive: true });
     animateCounters();
+
+    /* ===== LAZY IMAGE — fade in on load ===== */
+    document.querySelectorAll('img[loading="lazy"]').forEach(function (img) {
+        if (img.complete) {
+            img.classList.add('loaded');
+        } else {
+            img.addEventListener('load', function () {
+                img.classList.add('loaded');
+            });
+        }
+    });
 
     /* ===== INIT ===== */
     handleScroll();
