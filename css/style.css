@@ -1794,14 +1794,18 @@ h1, h2, h3, h4, h5 {
 }
 
 /* ── Smooth image load ────────────────────────────────────────── */
+/* Images are always visible — browser native lazy loading handles deferral.
+   We only add a fade-in when JS explicitly marks an image as freshly loaded. */
 img {
     transition: opacity 0.4s ease;
-}
-img[loading="lazy"] {
-    opacity: 0;
-}
-img[loading="lazy"].loaded {
     opacity: 1;
+}
+img.img-fade-in {
+    animation: imgFadeIn 0.5s ease forwards;
+}
+@keyframes imgFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
 }
 
 /* ── Mobile enhancement patches ──────────────────────────────── */

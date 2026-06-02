@@ -250,13 +250,17 @@
     window.addEventListener('scroll', animateCounters, { passive: true });
     animateCounters();
 
-    /* ===== LAZY IMAGE — fade in on load ===== */
+    /* ===== LAZY IMAGE — optional fade-in when image first loads ===== */
+    /* Images are visible by default; this just adds a brief fade if not yet cached */
     document.querySelectorAll('img[loading="lazy"]').forEach(function (img) {
-        if (img.complete) {
-            img.classList.add('loaded');
-        } else {
+        if (!img.complete || img.naturalWidth === 0) {
+            img.style.opacity = '0';
             img.addEventListener('load', function () {
-                img.classList.add('loaded');
+                img.style.opacity = '';
+                img.classList.add('img-fade-in');
+            });
+            img.addEventListener('error', function () {
+                img.style.opacity = '1'; /* always show — even broken images stay in layout */
             });
         }
     });
