@@ -73,6 +73,12 @@
 </head>
 <body>
 
+    <!-- Scroll progress bar -->
+    <div id="scroll-progress"></div>
+
+    <!-- Cursor glow for dark sections -->
+    <div id="cursor-glow"></div>
+
     <!-- ===== NAVIGATION ===== -->
     <nav class="navbar" id="navbar">
         <div class="nav-container">
@@ -106,6 +112,18 @@
     <!-- ===== HERO ===== -->
     <section id="hero" class="hero">
         <div class="hero-overlay"></div>
+        <!-- Floating chess piece particles -->
+        <div class="hero-pieces" aria-hidden="true">
+            <span class="hero-piece" style="left:8%;  --dur:16s; --delay:0s">♟</span>
+            <span class="hero-piece" style="left:18%; --dur:20s; --delay:3s">♞</span>
+            <span class="hero-piece" style="left:30%; --dur:13s; --delay:1s">♝</span>
+            <span class="hero-piece" style="left:42%; --dur:18s; --delay:5s">♜</span>
+            <span class="hero-piece" style="left:55%; --dur:15s; --delay:2s">♛</span>
+            <span class="hero-piece" style="left:66%; --dur:22s; --delay:4s">♟</span>
+            <span class="hero-piece" style="left:76%; --dur:17s; --delay:1.5s">♞</span>
+            <span class="hero-piece" style="left:86%; --dur:14s; --delay:6s">♝</span>
+            <span class="hero-piece" style="left:93%; --dur:19s; --delay:0.5s">♜</span>
+        </div>
         <div class="container hero-content">
             <div class="hero-badge">
                 <span>♞ FIDE National Instructor &nbsp;·&nbsp; Since 2016 &nbsp;·&nbsp; Chennai</span>

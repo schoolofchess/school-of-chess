@@ -2035,3 +2035,143 @@ img[loading="lazy"].loaded {
 @media (max-width: 480px) {
     .enquiry-info { padding: 1.4rem 1.25rem; }
 }
+
+/* ============================================================
+   PREMIUM ENHANCEMENT LAYER — v30
+   Cursor glow · Scroll progress · Card tilt · Hero particles
+   Magnetic buttons · Shimmer numbers · Text reveal
+   ============================================================ */
+
+/* ── Scroll Progress Bar ──────────────────────────────────── */
+#scroll-progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2.5px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent) 0%, #60a5fa 50%, #a78bfa 100%);
+    z-index: 9999;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 8px rgba(37,99,235,0.55), 0 0 2px rgba(167,139,250,0.4);
+}
+
+/* ── Cursor Glow — ambient blob that follows the mouse ────── */
+#cursor-glow {
+    position: fixed;
+    pointer-events: none;
+    z-index: 5;
+    width: 480px;
+    height: 480px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(37,99,235,0.10) 0%, transparent 68%);
+    transform: translate(-50%, -50%);
+    transition: opacity 0.4s ease;
+    opacity: 0;
+    will-change: transform;
+}
+.dark-section-active #cursor-glow { opacity: 1; }
+
+/* ── Hero Floating Chess Pieces ───────────────────────────── */
+.hero-pieces {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+.hero-piece {
+    position: absolute;
+    font-size: 1.6rem;
+    opacity: 0;
+    animation: floatPiece var(--dur, 14s) var(--delay, 0s) ease-in-out infinite;
+    user-select: none;
+    filter: drop-shadow(0 0 6px rgba(37,99,235,0.25));
+    color: rgba(255,255,255,0.06);
+}
+@keyframes floatPiece {
+    0%   { opacity: 0;    transform: translateY(0)     rotate(0deg);   }
+    10%  { opacity: 1;                                                   }
+    85%  { opacity: 0.7;                                                 }
+    100% { opacity: 0;    transform: translateY(-110vh) rotate(30deg);  }
+}
+
+/* ── 3D Card Tilt — perspective container ─────────────────── */
+.program-card,
+.why-card,
+.review-card {
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+/* ── Shimmer on Stats Numbers ─────────────────────────────── */
+.strip-num {
+    position: relative;
+    display: inline-block;
+}
+.strip-num::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%);
+    background-size: 200% 100%;
+    background-position: -100% 0;
+    animation: shimmerNum 3.5s ease-in-out infinite;
+    border-radius: 4px;
+    pointer-events: none;
+}
+@keyframes shimmerNum {
+    0%   { background-position: -100% 0; }
+    40%  { background-position: 200%  0; }
+    100% { background-position: 200%  0; }
+}
+
+/* ── Magnetic Button — JS adds inline transform, CSS smooths it */
+.btn-magnetic {
+    transition: transform 0.18s cubic-bezier(0.34,1.30,0.64,1),
+                box-shadow 0.2s ease,
+                background 0.2s ease,
+                border-color 0.2s ease,
+                color 0.2s ease !important;
+}
+
+/* ── Animated Gradient Section Title ─────────────────────── */
+.section-title-gradient {
+    background: linear-gradient(270deg, var(--dark) 0%, var(--accent) 40%, #60a5fa 70%, var(--dark) 100%);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 6s ease infinite;
+}
+@keyframes gradientShift {
+    0%   { background-position: 0%   50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0%   50%; }
+}
+
+/* ── Hero heading — word reveal ───────────────────────────── */
+.hero-word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(20px) rotateX(30deg);
+    animation: wordReveal 0.55s cubic-bezier(0.34,1.10,0.64,1) forwards;
+}
+@keyframes wordReveal {
+    to { opacity: 1; transform: translateY(0) rotateX(0deg); }
+}
+
+/* ── Glow pulse on WhatsApp float — richer ────────────────── */
+@keyframes waPulse {
+    0%  { box-shadow: 0 4px 22px rgba(37,211,102,0.5), 0 0 0 0   rgba(37,211,102,0.3); }
+    50% { box-shadow: 0 4px 36px rgba(37,211,102,0.75),0 0 0 10px rgba(37,211,102,0);  }
+    100%{ box-shadow: 0 4px 22px rgba(37,211,102,0.5), 0 0 0 0   rgba(37,211,102,0);  }
+}
+
+/* ── Reduced motion — disable all new animations ─────────── */
+@media (prefers-reduced-motion: reduce) {
+    #scroll-progress,
+    #cursor-glow,
+    .hero-piece,
+    .strip-num::after,
+    .hero-word { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; }
+    .section-title-gradient { animation: none !important; -webkit-text-fill-color: var(--dark); }
+}

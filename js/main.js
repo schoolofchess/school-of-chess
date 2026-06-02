@@ -261,6 +261,106 @@
         }
     });
 
+    /* ===== SCROLL PROGRESS BAR ===== */
+    var progressBar = document.getElementById('scroll-progress');
+    function updateProgress() {
+        var scrolled = window.scrollY;
+        var total    = document.documentElement.scrollHeight - window.innerHeight;
+        progressBar.style.width = (total > 0 ? (scrolled / total) * 100 : 0) + '%';
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    /* ===== CURSOR GLOW — tracks mouse on dark sections ===== */
+    var cursorGlow   = document.getElementById('cursor-glow');
+    var darkSections = document.querySelectorAll('.hero, .stats-strip, .cta-section, .enquiry-section');
+    var glowActive   = false;
+    var glowX = 0, glowY = 0, rafGlow;
+
+    function tickGlow() {
+        cursorGlow.style.left = glowX + 'px';
+        cursorGlow.style.top  = glowY + 'px';
+        rafGlow = null;
+    }
+
+    document.addEventListener('mousemove', function (e) {
+        glowX = e.clientX;
+        glowY = e.clientY;
+        if (!rafGlow) rafGlow = requestAnimationFrame(tickGlow);
+
+        var overDark = false;
+        darkSections.forEach(function (sec) {
+            var r = sec.getBoundingClientRect();
+            if (e.clientY >= r.top && e.clientY <= r.bottom) overDark = true;
+        });
+        if (overDark !== glowActive) {
+            glowActive = overDark;
+            cursorGlow.style.opacity = overDark ? '1' : '0';
+        }
+    });
+
+    /* ===== 3D CARD TILT ===== */
+    function addTilt(selector, maxDeg) {
+        document.querySelectorAll(selector).forEach(function (card) {
+            card.addEventListener('mousemove', function (e) {
+                var r   = card.getBoundingClientRect();
+                var cx  = r.left + r.width  / 2;
+                var cy  = r.top  + r.height / 2;
+                var dx  = (e.clientX - cx) / (r.width  / 2);
+                var dy  = (e.clientY - cy) / (r.height / 2);
+                card.style.transform = 'perspective(700px) rotateY(' + (dx * maxDeg) + 'deg) rotateX(' + (-dy * maxDeg) + 'deg) translateY(-4px)';
+            });
+            card.addEventListener('mouseleave', function () {
+                card.style.transform = '';
+            });
+        });
+    }
+    addTilt('.program-card', 6);
+    addTilt('.why-card',     5);
+    addTilt('.review-card',  4);
+
+    /* ===== MAGNETIC BUTTONS ===== */
+    document.querySelectorAll('.btn-primary, .btn-whatsapp').forEach(function (btn) {
+        btn.classList.add('btn-magnetic');
+        btn.addEventListener('mousemove', function (e) {
+            var r  = btn.getBoundingClientRect();
+            var dx = e.clientX - (r.left + r.width  / 2);
+            var dy = e.clientY - (r.top  + r.height / 2);
+            btn.style.transform = 'translate(' + dx * 0.18 + 'px, ' + (dy * 0.18 - 2) + 'px)';
+        });
+        btn.addEventListener('mouseleave', function () {
+            btn.style.transform = '';
+        });
+    });
+
+    /* ===== HERO WORD REVEAL — walk text nodes only, never touch tags ===== */
+    var heroHeading = document.querySelector('.hero-heading');
+    if (heroHeading) {
+        var wordIdx = 0;
+        var walker  = document.createTreeWalker(heroHeading, NodeFilter.SHOW_TEXT, null, false);
+        var textNodes = [];
+        var node;
+        while ((node = walker.nextNode())) textNodes.push(node);
+
+        textNodes.forEach(function (tn) {
+            var parts  = tn.nodeValue.split(/(\s+)/);
+            var frag   = document.createDocumentFragment();
+            parts.forEach(function (part) {
+                if (/^\s+$/.test(part) || part === '') {
+                    frag.appendChild(document.createTextNode(part));
+                } else {
+                    var span = document.createElement('span');
+                    span.className        = 'hero-word';
+                    span.style.animationDelay = (0.15 + wordIdx * 0.08) + 's';
+                    span.textContent      = part;
+                    frag.appendChild(span);
+                    wordIdx++;
+                }
+            });
+            tn.parentNode.replaceChild(frag, tn);
+        });
+    }
+
     /* ===== INIT ===== */
     handleScroll();
 
