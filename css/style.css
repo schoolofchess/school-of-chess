@@ -2570,6 +2570,55 @@ h1, h2, h3, h4, h5 {
     background: radial-gradient(circle, rgba(245,158,11,0.07) 0%, rgba(37,99,235,0.06) 50%, transparent 70%);
 }
 
+/* ── Strip-val wrapper — keeps number + plus on one line ─────── */
+.strip-val {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0;
+    line-height: 1;
+}
+
+/* ── Review avatars — gold ────────────────────────────────────── */
+.author-avatar {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+    color: #07091a;
+    font-weight: 800;
+    box-shadow: 0 2px 10px rgba(245,158,11,0.35);
+}
+
+/* ── Author name & role — clearly readable on dark ───────────── */
+.author-name { color: rgba(255,255,255,0.92) !important; }
+.author-role { color: rgba(255,255,255,0.48) !important; }
+
+/* ── Local Guide tag ──────────────────────────────────────────── */
+.review-guide-tag {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+    border: 1px solid rgba(245,158,11,0.35);
+    border-radius: 100px;
+    padding: 0.1rem 0.5rem;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+    font-family: var(--font-body);
+    line-height: 1.6;
+}
+
+/* ── 8-card reviews grid — 4 col desktop, 2 tablet, 1 mobile ─── */
+.reviews-grid-8 {
+    grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 1100px) {
+    .reviews-grid-8 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+    .reviews-grid-8 { grid-template-columns: 1fr; }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    REDUCED MOTION — disable new animations
    ═══════════════════════════════════════════════════════════════ */

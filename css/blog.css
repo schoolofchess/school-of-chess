@@ -1310,7 +1310,7 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
    HOMEPAGE FEATURED BLOG
    =========================== */
 .blog-preview-section {
-    background: var(--light-2);
+    background: var(--surface-2, #0d1328);
     padding: 100px 0;
 }
 
@@ -1321,12 +1321,12 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
 }
 
 .blog-preview-card {
-    background: var(--white);
+    background: rgba(255,255,255,0.04);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.09);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.25s ease;
     display: flex;
     flex-direction: column;
     text-decoration: none;
@@ -1335,7 +1335,8 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
 
 .blog-preview-card:hover {
     transform: translateY(-6px);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+    box-shadow: 0 16px 48px rgba(245,158,11,0.12), 0 4px 20px rgba(0,0,0,0.4);
+    border-color: rgba(245,158,11,0.25);
 }
 
 .preview-card-img {
@@ -1362,6 +1363,11 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
 
 .preview-card-img .piece { position: relative; z-index: 1; user-select: none; }
 
+/* ── Preview card category backgrounds (were missing — caused blank grey boxes) */
+.preview-card-img.cat-calculation { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); }
+.preview-card-img.cat-strategy    { background: linear-gradient(135deg, #0f2027 0%, #1a6b5a 100%); }
+.preview-card-img.cat-psychology  { background: linear-gradient(135deg, #450a0a 0%, #b91c1c 100%); }
+
 .preview-card-badge {
     position: absolute;
     top: 0.85rem;
@@ -1383,7 +1389,7 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
 
 .preview-card-meta {
     font-size: 0.75rem;
-    color: var(--gray-light);
+    color: rgba(255,255,255,0.45);
     margin-bottom: 0.65rem;
     display: flex;
     gap: 0.85rem;
@@ -1391,13 +1397,13 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
 }
 
 .preview-card-meta span { display: flex; align-items: center; gap: 0.3rem; }
-.preview-card-meta i { color: var(--accent); font-size: 0.68rem; }
+.preview-card-meta i { color: var(--gold, #f59e0b); font-size: 0.68rem; }
 
 .preview-card-title {
     font-family: var(--font-heading);
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--dark);
+    color: rgba(255,255,255,0.92);
     line-height: 1.35;
     margin-bottom: 0.65rem;
     transition: color 0.25s;
@@ -1407,7 +1413,7 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
     overflow: hidden;
 }
 
-.blog-preview-card:hover .preview-card-title { color: var(--accent); }
+.blog-preview-card:hover .preview-card-title { color: var(--gold, #f59e0b); }
 
 .preview-read-link {
     display: inline-flex;
@@ -1415,12 +1421,12 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
     gap: 0.4rem;
     font-size: 0.8rem;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--gold, #f59e0b);
     margin-top: auto;
-    transition: gap 0.25s;
+    transition: gap 0.25s, color 0.2s;
 }
 
-.blog-preview-card:hover .preview-read-link { gap: 0.65rem; }
+.blog-preview-card:hover .preview-read-link { gap: 0.65rem; color: var(--gold-light, #fbbf24); }
 
 .blog-section-cta {
     text-align: center;
