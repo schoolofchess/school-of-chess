@@ -2626,3 +2626,346 @@ h1, h2, h3, h4, h5 {
     .review-stars { text-shadow: none !important; }
     .about-section .about-highlight::after { box-shadow: none !important; }
 }
+
+/* ============================================================
+   PREMIUM ENHANCEMENT LAYER — v34
+   Light Content + Gold Accent System
+   Restores correct Dark Navy / Light Content split.
+   All content, reviews, stats, images unchanged.
+   ============================================================ */
+
+/* ── Body & headings — back to light foundation ──────────────── */
+body {
+    background: var(--white);
+    color: var(--gray);
+}
+h1, h2, h3, h4, h5 {
+    color: var(--dark);
+}
+
+/* ── Section titles & desc — dark on light ───────────────────── */
+.section-title { color: var(--dark); }
+.section-desc  { color: var(--gray-light); }
+
+/* ── Hero bottom fade → white (seamless into About) ─────────── */
+.hero::after {
+    background: linear-gradient(to top, var(--white) 0%, transparent 100%);
+}
+
+/* ── Section separators — subtle dark lines on light bg ─────── */
+.about-section::after,
+.why-section::after,
+.philosophy-section::after,
+.faq-section::after {
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.07), transparent);
+}
+
+/* ── Selection — gold tint ───────────────────────────────────── */
+::selection {
+    background: rgba(245,158,11,0.18);
+    color: var(--dark);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NAVBAR — white glass on scroll (over light content sections)
+   ═══════════════════════════════════════════════════════════════ */
+.navbar.scrolled {
+    background: rgba(255,255,255,0.96);
+    backdrop-filter: blur(16px) saturate(1.6);
+    -webkit-backdrop-filter: blur(16px) saturate(1.6);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.07), 0 4px 20px rgba(0,0,0,0.06);
+}
+.navbar.scrolled .logo-name    { color: var(--dark); }
+.navbar.scrolled .logo-tagline { color: var(--gray-light); }
+.navbar.scrolled .nav-links a  { color: var(--gray); }
+.navbar.scrolled .nav-links a:hover,
+.navbar.scrolled .nav-links a.active {
+    color: var(--gold);
+    background: rgba(245,158,11,0.07);
+}
+.navbar.scrolled .hamburger span { background: var(--dark); }
+.navbar.scrolled .nav-cta {
+    background: var(--gold);
+    color: #07091a;
+    border-color: var(--gold);
+}
+.navbar.scrolled .nav-cta:hover {
+    background: #fbbf24;
+    border-color: #fbbf24;
+    box-shadow: 0 4px 16px rgba(245,158,11,0.35);
+}
+
+/* Mobile nav — light panel ──────────────────────────────────── */
+@media (max-width: 768px) {
+    .nav-links {
+        background: rgba(255,255,255,0.98) !important;
+        border-top: 1px solid var(--border) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.12) !important;
+    }
+    .nav-links a {
+        color: var(--gray) !important;
+        border-radius: 8px;
+    }
+    .nav-links a:hover  { background: rgba(245,158,11,0.08) !important; color: var(--gold) !important; }
+    .nav-links a:active { background: rgba(245,158,11,0.14) !important; color: var(--gold) !important; }
+}
+
+/* ── Focus ring — gold ───────────────────────────────────────── */
+:focus-visible {
+    outline: 2px solid rgba(245,158,11,0.65);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
+
+/* ── Scroll progress bar — gold ──────────────────────────────── */
+#scroll-progress {
+    background: linear-gradient(90deg, var(--gold) 0%, #fbbf24 60%, #fde68a 100%);
+    box-shadow: 0 0 8px rgba(245,158,11,0.55);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ABOUT SECTION — light background, gold accents
+   ═══════════════════════════════════════════════════════════════ */
+.about-section { background: var(--white); }
+.about-section .section-title,
+.about-section h2 { color: var(--dark); }
+.about-section .about-subtitle { color: var(--gold); -webkit-text-fill-color: var(--gold); }
+.about-section .about-text { color: var(--gray); }
+.about-section .credential {
+    background: var(--light);
+    border-color: var(--border);
+    color: var(--dark);
+}
+.about-section .credential:hover {
+    border-color: rgba(245,158,11,0.35);
+    box-shadow: 0 4px 14px rgba(245,158,11,0.1);
+}
+.about-section .credential i { color: var(--gold); }
+.about-section .philosophy-pillars h4 { color: var(--dark); }
+.about-section .pillars-list li { color: var(--gray); }
+.about-section .pillars-list li i { color: var(--gold); }
+.about-section .about-highlight {
+    background: rgba(245,158,11,0.06);
+    border-left: 3px solid var(--gold);
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+.about-section .about-highlight::after {
+    background: linear-gradient(to bottom, var(--gold), #fbbf24);
+    box-shadow: 0 0 8px rgba(245,158,11,0.35);
+}
+.about-section .about-highlight i { color: var(--gold); }
+.about-section .about-highlight p { color: var(--gray); }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROGRAMS — light background, gold accents
+   ═══════════════════════════════════════════════════════════════ */
+.programs-section { background: var(--light); }
+.programs-section .section-title { color: var(--dark); }
+
+.program-card {
+    background: var(--white);
+    border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: var(--shadow);
+}
+.program-card::after {
+    background: linear-gradient(90deg, var(--gold), #fbbf24);
+}
+.program-card:hover {
+    border-color: rgba(245,158,11,0.18);
+    box-shadow:
+        0 0 0 1px rgba(245,158,11,0.08) inset,
+        0 8px 32px rgba(245,158,11,0.14),
+        0 2px 8px rgba(0,0,0,0.08);
+    transform: translateY(-4px);
+}
+.program-card h3 { color: var(--dark); }
+.program-card p  { color: var(--gray-light); }
+.program-card .program-icon i { color: var(--gold); }
+.program-tag {
+    background: rgba(245,158,11,0.09);
+    color: #b45309;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WHY CHOOSE US — light background, gold accents
+   ═══════════════════════════════════════════════════════════════ */
+.why-section { background: var(--white); }
+.why-section .section-title { color: var(--dark); }
+
+.why-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+.why-card:hover {
+    border-color: rgba(245,158,11,0.3);
+    box-shadow: 0 6px 28px rgba(245,158,11,0.1), 0 2px 8px rgba(0,0,0,0.06);
+    transform: translateY(-3px);
+}
+.why-icon {
+    background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.15));
+}
+.why-icon i { color: var(--gold); }
+.why-card:hover .why-icon {
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.25));
+    box-shadow: 0 0 16px rgba(245,158,11,0.18);
+}
+.why-card h4 { color: var(--dark); }
+.why-card p  { color: var(--gray-light); }
+
+/* ═══════════════════════════════════════════════════════════════
+   ACHIEVEMENTS — light background
+   ═══════════════════════════════════════════════════════════════ */
+.achievements-section { background: var(--light); }
+.achievements-section .section-title { color: var(--dark); }
+.achievement-col-header h3 { color: var(--dark); }
+
+.achievement-card {
+    background: var(--white);
+    border: none;
+    box-shadow: var(--shadow);
+}
+.achievement-card:hover {
+    box-shadow: var(--shadow-lg);
+    border: none;
+}
+.achievement-caption { color: var(--gray-light); }
+
+.fide-highlight {
+    background: rgba(245,158,11,0.05);
+    border-left: 3px solid var(--gold);
+}
+.fide-highlight i { color: var(--gold); }
+.fide-highlight p { color: var(--gray); }
+
+.achievement-actions .btn-outline {
+    color: var(--gold);
+    border-color: rgba(245,158,11,0.4);
+    background: transparent;
+}
+.achievement-actions .btn-outline:hover {
+    background: rgba(245,158,11,0.08);
+    color: #b45309;
+    border-color: var(--gold);
+    box-shadow: 0 4px 14px rgba(245,158,11,0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PHILOSOPHY / METHODOLOGY — light background, gold accents
+   ═══════════════════════════════════════════════════════════════ */
+.philosophy-section { background: var(--white); }
+.philosophy-section .section-title { color: var(--dark); }
+
+.philosophy-grid {
+    background: var(--border);
+    border-color: var(--border);
+}
+.philosophy-item {
+    background: var(--white);
+    border-left: 3px solid transparent;
+}
+.philosophy-item:hover {
+    background: var(--light-2);
+    border-left-color: var(--gold);
+}
+.philosophy-num { color: rgba(245,158,11,0.18); }
+.philosophy-item:hover .philosophy-num { color: rgba(245,158,11,0.35); }
+.philosophy-content h4 { color: var(--dark); }
+.philosophy-content p  { color: var(--gray-light); }
+
+/* ═══════════════════════════════════════════════════════════════
+   REVIEWS — light background, white cards, gold accents
+   ═══════════════════════════════════════════════════════════════ */
+.reviews-section { background: var(--light); }
+.reviews-section .section-title { color: var(--dark); }
+
+.review-card {
+    background: var(--white);
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: var(--shadow);
+}
+.review-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: rgba(245,158,11,0.15);
+}
+.review-card-featured {
+    background: linear-gradient(145deg, #fff 0%, #fffbeb 100%);
+    border: 1px solid rgba(245,158,11,0.28);
+    box-shadow: 0 4px 24px rgba(245,158,11,0.1), var(--shadow);
+}
+.review-card-featured:hover {
+    box-shadow: 0 10px 40px rgba(245,158,11,0.18), var(--shadow-lg);
+    border-color: rgba(245,158,11,0.4);
+}
+.review-card-featured::before { color: rgba(245,158,11,0.07); }
+/* Review text — slightly richer contrast than original */
+.review-text  { color: #374151; }
+.review-text::before { color: rgba(245,158,11,0.2); }
+.review-stars { color: var(--gold); text-shadow: none; }
+/* Author — clearly readable on light card */
+.author-name { color: var(--dark) !important; }
+.author-role { color: var(--gray-light) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   FAQ — light background, gold open state
+   ═══════════════════════════════════════════════════════════════ */
+.faq-section { background: var(--white); }
+.faq-section .section-title { color: var(--dark); }
+
+.faq-item {
+    background: var(--white);
+    border: 1px solid var(--border);
+}
+.faq-item.open {
+    border-color: rgba(245,158,11,0.3);
+    box-shadow: 0 4px 20px rgba(245,158,11,0.07);
+}
+.faq-question {
+    background: var(--white);
+    color: var(--dark);
+}
+.faq-question:hover { background: var(--light); }
+.faq-item.open .faq-question {
+    background: var(--light);
+    color: var(--gold);
+}
+.faq-icon { color: var(--gold); }
+.faq-answer p { color: var(--gray); }
+
+/* ═══════════════════════════════════════════════════════════════
+   BLOG PREVIEW — section-level dark text overrides
+   ═══════════════════════════════════════════════════════════════ */
+.blog-preview-section .section-title { color: var(--dark); }
+.blog-preview-section .section-desc  { color: var(--gray-light); }
+
+/* ═══════════════════════════════════════════════════════════════
+   BUTTONS — gold primary, gold-outlined secondary
+   ═══════════════════════════════════════════════════════════════ */
+.btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border-color: rgba(245,158,11,0.45);
+}
+.btn-outline:hover {
+    background: rgba(245,158,11,0.08);
+    color: #b45309;
+    border-color: var(--gold);
+    box-shadow: 0 4px 14px rgba(245,158,11,0.15);
+    transform: translateY(-2px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTACT / MAP links — gold
+   ═══════════════════════════════════════════════════════════════ */
+.map-directions-btn { color: var(--gold) !important; }
+.map-directions-btn:hover { color: #b45309 !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   REDUCED MOTION addendum
+   ═══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+    .review-stars { text-shadow: none !important; }
+}

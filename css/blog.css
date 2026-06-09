@@ -1462,3 +1462,35 @@ header#navbar .hamburger.open span:nth-child(3) { transform: translateY(-7px) ro
     .search-btn span { display: none; }
     .blog-hero-title { font-size: 1.7rem; }
 }
+
+/* ============================================================
+   v34 — Blog preview section: light background + white cards
+   ============================================================ */
+.blog-preview-section {
+    background: #f8fafc;
+    padding: 100px 0;
+}
+
+.blog-preview-card {
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.blog-preview-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 36px rgba(245,158,11,0.13), 0 4px 16px rgba(0,0,0,0.07);
+    border-color: rgba(245,158,11,0.28);
+}
+
+.preview-card-meta {
+    color: #9ca3af;
+}
+.preview-card-meta i { color: var(--gold, #f59e0b); }
+
+.preview-card-title {
+    color: #111827;
+}
+.blog-preview-card:hover .preview-card-title { color: var(--gold, #f59e0b); }
+
+.preview-read-link          { color: var(--gold, #f59e0b); }
+.blog-preview-card:hover .preview-read-link { color: #b45309; }
