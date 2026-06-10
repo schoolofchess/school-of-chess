@@ -2634,6 +2634,9 @@ h1, h2, h3, h4, h5 {
    All content, reviews, stats, images unchanged.
    ============================================================ */
 
+/* ── v35: --accent mapped to gold so inline var(--accent) usages are consistent ── */
+:root { --accent: var(--gold); }
+
 /* ── Body & headings — back to light foundation ──────────────── */
 body {
     background: var(--white);
@@ -2669,7 +2672,8 @@ h1, h2, h3, h4, h5 {
 /* ═══════════════════════════════════════════════════════════════
    NAVBAR — white glass on scroll (over light content sections)
    ═══════════════════════════════════════════════════════════════ */
-.navbar.scrolled {
+.navbar.scrolled,
+#navbar.scrolled {
     background: rgba(255,255,255,0.96);
     backdrop-filter: blur(16px) saturate(1.6);
     -webkit-backdrop-filter: blur(16px) saturate(1.6);
@@ -2677,13 +2681,17 @@ h1, h2, h3, h4, h5 {
 }
 .navbar.scrolled .logo-name    { color: var(--dark); }
 .navbar.scrolled .logo-tagline { color: var(--gray-light); }
-.navbar.scrolled .nav-links a  { color: var(--gray); }
+.navbar.scrolled .nav-links a,
+#navbar.scrolled .nav-links a  { color: var(--gray); }
 .navbar.scrolled .nav-links a:hover,
-.navbar.scrolled .nav-links a.active {
+.navbar.scrolled .nav-links a.active,
+#navbar.scrolled .nav-links a:hover,
+#navbar.scrolled .nav-links a.active {
     color: var(--gold);
     background: rgba(245,158,11,0.07);
 }
-.navbar.scrolled .hamburger span { background: var(--dark); }
+.navbar.scrolled .hamburger span,
+#navbar.scrolled .hamburger span { background: var(--dark); }
 .navbar.scrolled .nav-cta {
     background: var(--gold);
     color: #07091a;
